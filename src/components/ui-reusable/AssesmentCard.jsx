@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { getAge } from "../utils/ageConverter";
 import { timeConverter } from "../utils/timeconverter";
 import p1 from "../../../public/svg/placeholder.png";
+import { FaStar } from "react-icons/fa";
 
 const AssessmentCard = ({
   name,
@@ -50,18 +51,19 @@ const AssessmentCard = ({
     navigate(`/assessment/${patientId}/${assessmentId}`);
   };
 
+  // Check if button should be disabled
+  const isDisabled =
+    status === "accepted" || status === "completed" || status === "rejected";
+
   return (
     <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-4">
         <div className="flex gap-4 flex-1">
-          {/* Avatar with initials */}
-          {/* <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-            {name
-              ?.split(" ")
-              .map((n) => n[0])
-              .join("") || "NA"}
-          </div> */}
-          <img className="h-10 w-10" src={image || p1} />
+          <img
+            className="h-10 w-10 rounded-full object-cover"
+            src={image || p1}
+            alt={name}
+          />
 
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -72,28 +74,26 @@ const AssessmentCard = ({
               >
                 {name}
               </h2>
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusClass}`}
-              >
-                {status && status.trim() !== ""
-                  ? status.toUpperCase()
-                  : "PENDING"}
-              </span>
-              <span className="text-xs text-gray-500 ">
+
+              <span className="text-xs text-gray-500">
                 {timeConverter(timeAgo)}
               </span>
+
+              {/* ✅ Changed from span to div with inline-flex */}
               {ratings && (
-                <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded-md text-xs font-medium">
-                  ⭐ {ratings}
-                </span>
+                <div className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-700 rounded-md text-xs font-medium">
+                  <FaStar className="text-amber-500 " size={20} />
+                  <span>{ratings}</span>
+                </div>
               )}
             </div>
-            <p className="text-xs text-slate-500  text-left">
+
+            <p className="text-xs text-slate-500 text-left">
               {getAge(age)} years
             </p>
 
             {/* Content - clickable area */}
-            <div onClick={handleCardClick} className="mt-2  cursor-pointer">
+            <div onClick={handleCardClick} className="mt-2 cursor-pointer">
               <p className="font-semibold text-sm text-slate-900">
                 {childCondition}
               </p>
@@ -104,57 +104,53 @@ const AssessmentCard = ({
           </div>
         </div>
 
-        {/* Three-dot menu */}
+        {/* Status Button with Menu */}
         <div className="relative" ref={menuRef}>
           <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="p-2 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors"
+            onClick={() => {
+              if (!isDisabled) {
+                setMenuOpen((v) => !v);
+              }
+            }}
+            disabled={isDisabled}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-all ${statusClass} ${
+              isDisabled
+                ? "cursor-not-allowed "
+                : "cursor-pointer hover:shadow-sm"
+            }`}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
-            aria-label="More options"
+            aria-label="Status menu"
           >
-            <FiMoreVertical size={20} className="text-slate-600" />
+            {status && status.trim() !== "" ? status.toUpperCase() : "PENDING"}
           </button>
 
-          {menuOpen && (
+          {/* Dropdown Menu - Only show for pending status */}
+          {menuOpen && (status === "pending" || !status) && (
             <div
               role="menu"
-              className="absolute right-0 mt-2 w-24 bg-white text-center rounded-lg shadow-lg border border-slate-200 z-20 overflow-hidden"
+              className="absolute right-0 mt-2 w-32 bg-white text-center rounded-lg shadow-lg border border-slate-200 z-20 overflow-hidden"
             >
-              {(status === "pending" || !status) && ( 
-                <>
-                  <button
-                    onClick={() => {
-                      onAcceptCase?.();
-                      setMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-3 hover:bg-green-50 cursor-pointer text-sm text-slate-700 hover:text-green-700 font-medium transition-colors border-b border-slate-100"
-                    role="menuitem"
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => {
-                      onDeclineCase?.();
-                      setMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-3 hover:bg-red-50 cursor-pointer text-sm text-slate-700 hover:text-red-700 font-medium transition-colors"
-                    role="menuitem"
-                  >
-                    Decline
-                  </button>
-                </>
-              )}
-
-              {(status === "accepted" ||
-                status === "completed" ||
-                status === "rejected") && (
-                <p className="px-4 py-3 text-sm text-slate-500 text-center">
-                  {status === "completed" && "Case completed"}
-                  {status === "accepted" && "Case accepted"}
-                  {status === "rejected" && "Case rejected"}
-                </p>
-              )}
+              <button
+                onClick={() => {
+                  onAcceptCase?.();
+                  setMenuOpen(false);
+                }}
+                className="w-full px-4 py-3 hover:bg-green-50 cursor-pointer text-sm text-slate-700 hover:text-green-700 font-medium transition-colors border-b border-slate-100"
+                role="menuitem"
+              >
+                Accept
+              </button>
+              <button
+                onClick={() => {
+                  onDeclineCase?.();
+                  setMenuOpen(false);
+                }}
+                className="w-full px-4 py-3 hover:bg-red-50 cursor-pointer text-sm text-slate-700 hover:text-red-700 font-medium transition-colors"
+                role="menuitem"
+              >
+                Decline
+              </button>
             </div>
           )}
         </div>

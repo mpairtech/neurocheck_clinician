@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { getAllanswers } from "../api/assessment";
 import TextAns from "./ui-reusable/TextAns";
+
 const SubmissionDetails = ({ patientId, assessmentId, score, time }) => {
   const [answers, setAnswers] = useState({});
   const [patient, setPatient] = useState(null);

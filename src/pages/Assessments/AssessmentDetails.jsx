@@ -1,8 +1,4 @@
-import {
-  getAllappointments,
-  getSubmissionByPatientId,
-  updateSchedule,
-} from "../../api/assessment";
+import { getAllappointments, getSubmissionByPatientId, updateSchedule } from "../../api/assessment";
 import { useContext, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Header from "../../components/ui-reusable/Header";
@@ -209,14 +205,17 @@ const AssessmentDetails = () => {
 
   /* ======================= UI ======================= */
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
-      <Header title="Assessment Submission Details" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 ">
+      <Header
+        title="Assessment Submission Details"
+        description="Review assessment submission details and complete consultancy report "
+      />
 
       {/* PROFILE */}
-      <div className="bg-[#fbf8f6] rounded-xl p-6">
+      <div className="bg-[#f8f5ed] rounded-xl p-6 mb-2">
         <h1 className="text-2xl font-semibold">{data.patient.name}</h1>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-10 mb-2 text-sm">
           <Info
             label="Age"
             value={`${getAge(data.patient.dateOfBirth)} years`}
@@ -226,144 +225,147 @@ const AssessmentDetails = () => {
           <Info label="Type" value="Patient Assessment" />
         </div>
       </div>
+      <div className="space-y-6  p-4 ">
+        {/* TABS */}
+        <div className="border-b flex gap-6 text-sm font-medium">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`pb-3 ${
+                activeTab === tab
+                  ? "border-b-2 cursor-pointer border-[#114654] text-[#114654]"
+                  : "text-gray-500 cursor-pointer"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
 
-      {/* TABS */}
-      <div className="border-b flex gap-6 text-sm font-medium">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`pb-3 ${
-              activeTab === tab
-                ? "border-b-2 cursor-pointer border-[#114654] text-[#114654]"
-                : "text-gray-500 cursor-pointer"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+        {/* CONTENT */}
+        {activeTab === "AI Summary" &&
+          submission.map((item, i) => (
+            <SubmissionDetailsCard
+              key={i}
+              name={item.patient.name}
+              status={item.status}
+              summary={item.summaries}
+              childCondition={item.assessment.category}
+              description={item.assessment.description}
+            />
+          ))}
+
+        {activeTab === "View Assessment details" &&
+          submission.map((item, i) => (
+            <SubmissionDetails
+              key={i}
+              patientId={item.patient.id}
+              assessmentId={item?.assessmentId}
+              time={item.createdAt}
+
+              score={item.score}
+            />
+          ))}
+        
+
+        {activeTab === "Consultancy Report" && (
+          <ReportStructure
+            data={{
+              patientName: data.patient.name,
+              age: getAge(data.patient.dateOfBirth),
+              demographics: data.patient.demographics,
+              clinicianDiagnosis: patientAppointment?.diagnosis || "",
+              reviewNotes: patientAppointment?.notes_from_review || "",
+              postConsultNotes: patientAppointment?.feedback || "",
+            }}
+            submission={submission}
+          />
+        )}
+
+        {/* FOOTER ACTIONS */}
+        <div className="flex justify-end gap-3 pt-6">
+          {!isFirst && (
+            <button
+              onClick={() => setActiveTab(tabs[index - 1])}
+              className="border border-[#114654] cursor-pointer text-[#114654] px-5 py-2 text-xs rounded-full"
+            >
+              Previous
+            </button>
+          )}
+
+          {!isLast && (
+            <button
+              onClick={() => setActiveTab(tabs[index + 1])}
+              className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
+            >
+              Next
+            </button>
+          )}
+
+          {isLast && (
+            <>
+              {isReportGenerated && (
+                <button
+                  onClick={generateConsultancyReport}
+                  className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
+                >
+                  Download Report
+                </button>
+              )}
+
+              {isReportGenerated && !hasFeedback && (
+                <button
+                  onClick={() => {
+                    setSelectedAppointment(patientAppointment);
+                    setFeedbackModal(true);
+                  }}
+                  className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
+                >
+                  Add Feedback
+                </button>
+              )}
+
+              {!hasAppointmentForPatient && (
+                <button
+                  onClick={handleMakeDiagnosis}
+                  className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
+                >
+                  Make diagnosis report
+                </button>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* FEEDBACK MODAL */}
+        <Modal
+          classname="w-[65vw] lg:w-[34vw]"
+          isOpen={feedbackModal}
+          closeModal={closeFeedBackModal}
+          title="Post Appointment Feedback"
+        >
+          <form onSubmit={handleSubmitFeedback}>
+            <label className="block font-medium text-sm mb-2">
+              Clinician Notes Post Consultation
+            </label>
+
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full h-36 rounded border p-4"
+              required
+            />
+
+            <button
+              type="submit"
+              className="w-full mt-4 bg-[#0A4863] text-white py-2 rounded-lg"
+            >
+              Submit
+            </button>
+          </form>
+        </Modal>
       </div>
-
-      {/* CONTENT */}
-      {activeTab === "AI Summary" &&
-        submission.map((item, i) => (
-          <SubmissionDetailsCard
-            key={i}
-            name={item.patient.name}
-            status={item.status}
-            summary={item.summaries}
-            childCondition={item.assessment.category}
-            description={item.assessment.description}
-          />
-        ))}
-
-      {activeTab === "View Assessment details" &&
-        submission.map((item, i) => (
-          <SubmissionDetails
-            key={i}
-            patientId={item.patient.id}
-            assessmentId={item?.assessmentId}
-            time={item.createdAt}
-            score={item.score}
-          />
-        ))}
-
-      {activeTab === "Consultancy Report" && (
-        <ReportStructure
-          data={{
-            patientName: data.patient.name,
-            age: getAge(data.patient.dateOfBirth),
-            demographics: data.patient.demographics,
-            clinicianDiagnosis: patientAppointment?.diagnosis || "",
-            reviewNotes: patientAppointment?.notes_from_review || "",
-            postConsultNotes: patientAppointment?.feedback || "",
-          }}
-          submission={submission}
-        />
-      )}
-
-      {/* FOOTER ACTIONS */}
-      <div className="flex justify-end gap-3 pt-6">
-        {!isFirst && (
-          <button
-            onClick={() => setActiveTab(tabs[index - 1])}
-            className="border border-[#114654] cursor-pointer text-[#114654] px-5 py-2 text-xs rounded-full"
-          >
-            Previous
-          </button>
-        )}
-
-        {!isLast && (
-          <button
-            onClick={() => setActiveTab(tabs[index + 1])}
-            className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
-          >
-            Next
-          </button>
-        )}
-
-        {isLast && (
-          <>
-            {isReportGenerated && (
-              <button
-                onClick={generateConsultancyReport}
-                className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
-              >
-                Download Report
-              </button>
-            )}
-
-            {isReportGenerated && !hasFeedback && (
-              <button
-                onClick={() => {
-                  setSelectedAppointment(patientAppointment);
-                  setFeedbackModal(true);
-                }}
-                className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
-              >
-                Add Feedback
-              </button>
-            )}
-
-            {!hasAppointmentForPatient && (
-              <button
-                onClick={handleMakeDiagnosis}
-                className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
-              >
-                Make diagnosis report
-              </button>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* FEEDBACK MODAL */}
-      <Modal
-        classname="w-[65vw] lg:w-[34vw]"
-        isOpen={feedbackModal}
-        closeModal={closeFeedBackModal}
-        title="Post Appointment Feedback"
-      >
-        <form onSubmit={handleSubmitFeedback}>
-          <label className="block font-medium text-sm mb-2">
-            Clinician Notes Post Consultation
-          </label>
-
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="w-full h-36 rounded border p-4"
-            required
-          />
-
-          <button
-            type="submit"
-            className="w-full mt-4 bg-[#0A4863] text-white py-2 rounded-lg"
-          >
-            Submit
-          </button>
-        </form>
-      </Modal>
     </div>
   );
 };
