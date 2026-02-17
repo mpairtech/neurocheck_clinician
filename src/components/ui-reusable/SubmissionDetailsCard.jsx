@@ -4,7 +4,6 @@ import p1 from "../../../public/svg/user-img.svg";
 
 import { getAge } from "../utils/ageConverter";
 import { timeConverter } from "../utils/timeconverter";
-// import  { getAge,timeConverter } from "../utils/ageConverter";
 
 const SubmissionDetailsCard = ({
   name,

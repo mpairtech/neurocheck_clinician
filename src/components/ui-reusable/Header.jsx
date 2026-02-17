@@ -25,7 +25,7 @@ const handleGuidelineClick = () => {
   const handleLogoutClick = () => {
     handleLogout();
     setShowConfirm(false);
-    // setShowTooltip(false);
+    setShowTooltip(false);
     toast.success("Logged Out Successfully!");
     localStorage.removeItem("accessToken");
     navigate("/signin", { replace: true });
@@ -62,7 +62,7 @@ const handleGuidelineClick = () => {
 
             {/* Logout */}
             <button
-              onClick={handleLogoutClick}
+              onClick={() => setShowConfirm(true)}
               className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
               title="Logout"
             >
@@ -91,7 +91,7 @@ const handleGuidelineClick = () => {
                 No, Cancel
               </button>
               <button
-                onClick={handleLogoutConfirm}
+                onClick={handleLogoutClick}
                 className="px-4 py-2 text-sm rounded-lg bg-teal-700 hover:bg-teal-800 text-white transition-colors"
               >
                 Yes, Logout
@@ -100,7 +100,6 @@ const handleGuidelineClick = () => {
           </div>
         </div>
       )}
-
     </div>
   );
 };
