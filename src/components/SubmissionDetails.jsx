@@ -31,7 +31,7 @@ const SubmissionDetails = ({ patientId, assessmentId, score, time }) => {
       const grouped = raw.reduce((acc, item) => {
         const variant = item.question?.variant;
 
-        // 👇 tab name decide
+        // tab name decide
         const type =
           variant === "external"
             ? `${item.question?.questionType?.name} - External`

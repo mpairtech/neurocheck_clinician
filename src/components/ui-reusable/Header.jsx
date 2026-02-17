@@ -3,6 +3,7 @@ import { useContext, useRef, useState } from "react";
 import { AiOutlinePoweroff } from "react-icons/ai";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../Provider/AuthProvider";
+import toast from "react-hot-toast";
 
 const Header = ({
   title,
@@ -12,6 +13,8 @@ const Header = ({
   const { userData, handleLogout } = useContext(AuthContext) || {};
     const [showTooltip, setShowTooltip] = useState(false);
   const tooltipRef = useRef(null);
+    const [showConfirm, setShowConfirm] = useState(false);
+
   
   const navigate = useNavigate();
 
@@ -21,7 +24,9 @@ const handleGuidelineClick = () => {
   
   const handleLogoutClick = () => {
     handleLogout();
-    setShowTooltip(false);
+    setShowConfirm(false);
+    // setShowTooltip(false);
+    toast.success("Logged Out Successfully!");
     localStorage.removeItem("accessToken");
     navigate("/signin", { replace: true });
   };
@@ -66,6 +71,36 @@ const handleGuidelineClick = () => {
           </div>
         </div>
       </div>
+
+      {/* ✅ Confirmation Modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-10 bg-black/30">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-[90vw] max-w-sm">
+            <h2 className="text-lg font-semibold text-slate-800 mb-1">
+              Confirm Logout
+            </h2>
+            <p className="text-sm text-slate-500 mb-4">
+              Are you sure you want to logout?
+            </p>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                No, Cancel
+              </button>
+              <button
+                onClick={handleLogoutConfirm}
+                className="px-4 py-2 text-sm rounded-lg bg-teal-700 hover:bg-teal-800 text-white transition-colors"
+              >
+                Yes, Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

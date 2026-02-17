@@ -65,7 +65,8 @@ const Insights = ({ stats }) => {
       {/* Total Earnings */}
       <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-sm p-6 text-white">
         <h3 className="font-semibold mb-2">Total Earnings</h3>
-        <p className="text-3xl font-bold mb-4">£{stats.totalEarnings.toLocaleString()}</p>
+       <p className="text-4xl text-white font-semibold ">Coming Soon</p>
+        {/* <p className="text-3xl font-bold mb-4">£{stats.totalEarnings.toLocaleString()}</p>
         <div className="space-y-2 text-sm opacity-90">
           <div className="flex justify-between">
             <span>This Month</span>
@@ -75,7 +76,7 @@ const Insights = ({ stats }) => {
             <span>Total Patients</span>
             <span className="font-semibold">{stats.totalAssessments}</span>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

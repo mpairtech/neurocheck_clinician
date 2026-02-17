@@ -2,8 +2,9 @@ import { useState, useEffect, useContext } from "react";
 import { HiClock } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../Provider/AuthProvider";
-import { getAllsubmissions } from "../../api/assessment";
+import { getAllsubmissions,getAllappointments  } from "../../api/assessment";
 import { getAge } from "../utils/ageConverter";
+
 
 const statusBadge = {
   pending: "bg-orange-100 text-orange-700",
@@ -37,6 +38,8 @@ const AppointmentSection = () => {
           if (!acc[key]) {
             acc[key] = {
               id: item.id,
+              patientId: item.patientId,
+              assessmentId: item.assessmentId,
               patientName: item.patient?.name,
               assessmentType: item.assessment?.name,
               age: item.patient?.dateOfBirth,
@@ -51,18 +54,27 @@ const AppointmentSection = () => {
       setRecentSubmissions(groupedSubmissions);
 
       // Fetch upcoming appointments
-      const aptRes = await getUpcomingAppointments();
-      const upcoming = aptRes?.payload
-        ?.filter((apt) => apt.clinicianId === Number(userData.id))
-        ?.map((apt) => ({
-          id: apt.id,
-          patientName: apt.patient?.name,
-          condition: apt.condition,
-          time: apt.time,
-          status: apt.status,
-          date: apt.date,
-        }));
-      setUpcomingAppointments(upcoming);
+
+    const aptRes = await getAllappointments();
+
+    const upcoming = aptRes?.payload
+      ?.filter(
+        (apt) =>
+          apt?.clinicianId === Number(userData.id) &&
+          apt?.status !== "Cancelled", // optional filter
+      )
+      ?.map((apt) => ({
+        id: apt.id,
+        patientId: apt.patientId,
+        patientName: apt.patient?.name,
+        condition: apt.condition,
+        time: apt.time,
+        status: apt.status,
+        metting_status: apt.metting_status,
+      }));
+
+    setUpcomingAppointments(upcoming);
+
     } catch (err) {
       console.error("Error fetching data:", err);
     }
@@ -135,14 +147,16 @@ const AppointmentSection = () => {
                     </p>
                   </div>
 
-                 
-                    <button
-                      onClick={() => navigate(`/assessments/${submission.id}`)}
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      Review →
-                    </button>
-                
+                  <button
+                    onClick={() =>
+                      navigate(
+                        `/assessment/${submission.patientId}/${submission.assessmentId}`,
+                      )
+                    }
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Review →
+                  </button>
                 </div>
               </div>
             ))
@@ -183,7 +197,10 @@ const AppointmentSection = () => {
                   <div className="flex items-center gap-2">
                     <HiClock className="w-4 h-4 text-slate-500" />
                     <span className="text-sm font-semibold text-slate-900">
-                      {apt.time}
+                      {new Date(apt.time).toLocaleTimeString("en-GB", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </span>
                   </div>
 
@@ -212,7 +229,14 @@ const AppointmentSection = () => {
         </div>
 
         <div className="p-4 border-t border-slate-200">
-          <button className="w-full py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg">
+          <button
+            onClick={() =>
+              navigate(
+                `/appointments`,
+              )
+            }
+            className="w-full py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg"
+          >
             View Full Calendar
           </button>
         </div>
