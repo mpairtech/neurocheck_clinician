@@ -1,8 +1,9 @@
+
+
 import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getUserById } from "../api/user";
+import { getUserById, updateUserProfile } from "../api/user";
 import { AuthContext } from "../Provider/AuthProvider";
-import Header from "./ui-reusable/Header";
 import p1 from "../../public/svg/placeholder.png";
 import {
   FaEdit,
@@ -12,21 +13,44 @@ import {
   FaMapMarkerAlt,
   FaCertificate,
   FaIdCard,
+  FaTimes,
+  FaSave,
+  FaKey,
 } from "react-icons/fa";
-import { FaTimes } from "react-icons/fa";
+import { IoCheckmark } from "react-icons/io5";
 import ChangePassword from "./Authentication/ChangePassword";
 
 
+  // Reusable input field for the modal
+const InputField = ({ label, name, value, onChange, type = "text", placeholder }) => (
+  <div className="flex flex-col gap-1">
+    <label className="text-sm font-medium text-slate-600">{label}</label>
+    <input
+      type={type}
+      name={name}
+      value={value || ""}
+      onChange={onChange}
+      placeholder={placeholder || `Enter ${label.toLowerCase()}`}
+      className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+    />
+  </div>
+);
+
+
 const PersonalInfo = () => {
-  const { userData } = useContext(AuthContext) || {};
+  const { userData, setUserData } = useContext(AuthContext) || {};
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showChangePassword, setShowChangePassword] = useState(false);
 
+  // Edit Profile States
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState("");
+  const [updateSuccess, setUpdateSuccess] = useState(false);
 
-    const navigate = useNavigate();
-    console.log("AuthContext userData:", userData);
-
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -42,9 +66,60 @@ const PersonalInfo = () => {
         }
       }
     };
-
     fetchUserProfile();
   }, [userData?.id]);
+
+  // Prefill form when modal opens
+  const handleOpenEdit = () => {
+    setEditForm({
+      name: userData?.name || "",
+      phone: userData?.phone || "",
+      practiceName: userData?.practiceName || "",
+      hcpcTitle: userData?.hcpcTitle || "",
+      regNo: userData?.regNo || "",
+      certification: userData?.certification || "",
+      street: userData?.street || "",
+      postCode: userData?.postCode || "",
+      state: userData?.state || "",
+      country: userData?.country || "",
+    });
+    setUpdateError("");
+    setUpdateSuccess(false);
+    setShowEditProfile(true);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setUpdating(true);
+    setUpdateError("");
+    setUpdateSuccess(false);
+
+    try {
+      const response = await updateUserProfile(userData.id, editForm);
+      if (response?.success || response?.payload) {
+        setUpdateSuccess(true);
+        // Update context so UI reflects changes immediately
+        if (setUserData) {
+          setUserData((prev) => ({ ...prev, ...editForm }));
+        }
+        setTimeout(() => {
+          setShowEditProfile(false);
+          setUpdateSuccess(false);
+        }, 1200);
+      } else {
+        setUpdateError(response?.message || "Update failed. Please try again.");
+      }
+    } catch (error) {
+      setUpdateError("Something went wrong. Please try again.");
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -79,64 +154,47 @@ const PersonalInfo = () => {
     </div>
   );
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 px-8 ">
-      {/* <div className="text-left ">
-        <h1 className="text-xl font-bold ">Personal Details</h1>
-      </div> */}
 
-      <div className=" mx-auto  pb-6">
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 px-8">
+      <div className="mx-auto pb-6">
         {/* Profile Header Card */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
               <img src={userData.image || p1} alt="" className="h-14 w-auto" />
-
               <div>
                 <h2 className="text-xl font-bold text-slate-900">
                   {userData.name}
                 </h2>
                 <p className="text-slate-600 text-xs">{userData.email}</p>
-                {/* <span className="inline-block mt-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                  {userData.role?.toUpperCase()}
-                </span> */}
               </div>
             </div>
 
-            {/* Edit Button */}
-            <button
-              onClick={() => setShowChangePassword(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-sm font-medium transition-all shadow-sm"
-            >
-              <FaEdit className="w-4 h-4" />
-              Change Password
-            </button>
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleOpenEdit}
+                className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white rounded-lg text-xs font-medium transition-all shadow-sm"
+              >
+                <FaEdit size={14} />
+                Edit Profile
+              </button>
 
-            {/* Change Password Modal */}
-            {showChangePassword && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative">
-                  {/* Close Button */}
-                  <button
-                    onClick={() => setShowChangePassword(false)}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <FaTimes className="w-5 h-5" />
-                  </button>
-
-                  {/* ChangePassword Component */}
-                  <ChangePassword
-                    onClose={() => setShowChangePassword(false)}
-                  />
-                </div>
-              </div>
-            )}
+              <button
+                onClick={() => setShowChangePassword(true)}
+                className="flex items-center gap-2 px-4 py-3 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-medium transition-all"
+              >
+                <FaKey size={14} />
+                Change Password
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Information Sections */}
+        {/* Info Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Personal Details */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
               <FaUser className="text-blue-600" />
@@ -157,7 +215,6 @@ const PersonalInfo = () => {
             </div>
           </div>
 
-          {/* Professional Details */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
               <FaCertificate className="text-blue-600" />
@@ -187,7 +244,6 @@ const PersonalInfo = () => {
             </div>
           </div>
 
-          {/* Address Details */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 lg:col-span-2">
             <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
               <FaMapMarkerAlt className="text-blue-600" />
@@ -218,6 +274,160 @@ const PersonalInfo = () => {
           </div>
         </div>
       </div>
+
+      {/* ─── Edit Profile Modal ─── */}
+      {showEditProfile && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-center pt-6 pb-2 border-b border-slate-100 sticky top-0 bg-white rounded-t-xl z-10  ">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">
+                  Edit Profile
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Update your personal and professional information
+                </p>
+              </div>
+              <button
+                onClick={() => setShowEditProfile(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 absolute top-6 right-4"
+              >
+                <FaTimes className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleUpdateProfile} className="p-6 space-y-4">
+              {/* Personal Section */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+                  <FaUser className="text-blue-500" /> Personal
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <InputField
+                    label="Full Name"
+                    name="name"
+                    value={editForm.name}
+                    onChange={handleInputChange}
+                  />
+                  {/* <InputField label="Full Name" name="name" /> */}
+
+                  <InputField
+                    label="Phone Number"
+                    name="phone"
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+
+              <hr className="border-slate-100" />
+
+              {/* Professional Section */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+                  <FaCertificate className="text-blue-500" /> Professional
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <InputField
+                    label="Practice Name"
+                    name="practiceName"
+                    value={editForm.practiceName}
+                    onChange={handleInputChange}
+                  />
+                  <InputField
+                    label="HCPC Title"
+                    name="hcpcTitle"
+                    value={editForm.hcpcTitle}
+                    onChange={handleInputChange}
+                  />
+                  <InputField
+                    label="Registration Number"
+                    name="regNo"
+                    value={editForm.regNo}
+                    onChange={handleInputChange}
+                  />
+                  <InputField
+                    label="Certification"
+                    name="certification"
+                    value={editForm.certification}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+
+              <hr className="border-slate-100" />
+
+              {/* Address Section */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+                  <FaMapMarkerAlt className="text-blue-500" /> Address
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <InputField label="Street" name="street" />
+                  <InputField label="Post Code" name="postCode" />
+                  <InputField label="State" name="state" />
+                  <InputField label="Country" name="country" />
+                </div>
+              </div>
+
+              {/* Feedback messages */}
+              {updateError && (
+                <p className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-lg">
+                  {updateError}
+                </p>
+              )}
+              {updateSuccess && (
+                <p className="text-sm text-green-600 bg-green-50 px-4 py-2 rounded-lg">
+                  <IoCheckmark size={14} /> Profile updated successfully!
+                </p>
+              )}
+
+              {/* Footer Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditProfile(false)}
+                  className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updating}
+                  className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-medium rounded-lg transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {updating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>Save Changes</>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Change Password Modal (existing) ─── */}
+      {showChangePassword && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setShowChangePassword(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <FaTimes className="w-5 h-5" />
+            </button>
+            <ChangePassword onClose={() => setShowChangePassword(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

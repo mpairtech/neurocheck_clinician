@@ -1,21 +1,23 @@
-import {
+ import {
   addClinicianAvailabilty,
   getCinicianAvailabilityById,
+  updateClinicianAvailability, 
 } from "../api/user";
 import { AuthContext } from "../Provider/AuthProvider";
 import { useContext, useEffect, useState } from "react";
+import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
 
 const Availability = () => {
   const { userData } = useContext(AuthContext) || {};
   const [availabilityType, setAvailabilityType] = useState("Select");
-  // const [leaves, setLeaves] = useState([]);
   const [timeSlots, setTimeSlots] = useState([
-    {
-      day: "Saturday",
-      start: "",
-      end: "",
-    },
+    { day: "Saturday", start: "", end: "" },
   ]);
+  const [availability, setAvailability] = useState([]);
+
+  // Edit state
+  const [editingId, setEditingId] = useState(null);
+  const [editRow, setEditRow] = useState({ day: "", time: "", endTime: "" });
 
   const availabilityTypes = ["Select", "All day", "Specific day"];
   const days = [
@@ -28,17 +30,16 @@ const Availability = () => {
     "Friday",
   ];
 
-  const to12HourFormat = (time24) => {
-    let [hour, minute] = time24.split(":").map(Number);
-    const ampm = hour >= 12 ? "PM" : "AM";
-    hour = hour % 12 || 12;
-    return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")} ${ampm}`;
-  };
-
   const formatTime = (t) => {
-    // If already has seconds, return as is
+    if (!t) return "";
     if (t.length === 8) return t;
     return t + ":00";
+  };
+
+  // time "09:00:00" → "09:00" (input type=time এর জন্য)
+  const toInputTime = (t) => {
+    if (!t) return "";
+    return t.slice(0, 5);
   };
 
   const handleAddSlot = () => {
@@ -51,37 +52,8 @@ const Availability = () => {
     setTimeSlots(newSlots);
   };
 
-  const handleAddLeave = async () => {
-    if (availabilityType === "Select") return;
-
-    const validSlots = timeSlots.filter((slot) => slot.start && slot.end);
-
-    if (validSlots.length === 0) return;
-
-    const payload = validSlots.map((slot) => ({
-      availabilityType:
-        availabilityType === "All day" ? "all_day" : "specific_day",
-      day: slot.day,
-      time: formatTime(slot.start),
-      endTime: formatTime(slot.end),
-      userId: String(userData?.id),
-    }));
-
-    //console.log("Payload:", payload);
-
-    const result = await addClinicianAvailabilty(payload);
-    //console.log("API Result:", result);
-
-    getAvailability();
-    // setLeaves((prev) => [...prev, ...validSlots]);
-    setAvailabilityType("Select");
-    setTimeSlots([{ day: "Saturday", start: "", end: "" }]);
-  };
-
-  const [availability, setAvailability] = useState([]);
   const getAvailability = async () => {
     const data = await getCinicianAvailabilityById(userData?.id);
-    //console.log(data?.payload);
     setAvailability(data?.payload);
   };
 
@@ -89,15 +61,79 @@ const Availability = () => {
     getAvailability();
   }, [userData?.id]);
 
+  const handleAddLeave = async () => {
+    if (!userData?.id) return;
+    if (availabilityType === "Select") {
+      alert("Select availability type");
+      return;
+    }
+
+    const validSlots = timeSlots.filter((slot) => slot.start && slot.end);
+    if (validSlots.length === 0) {
+      alert("Select time first");
+      return;
+    }
+
+    const payload = validSlots.map((slot) => ({
+      availabilityType:
+        availabilityType === "All day" ? "all_day" : "specific_day",
+      day: slot.day,
+      time: slot.start + ":00",
+      endTime: slot.end + ":00",
+      userId: String(userData.id),
+    }));
+
+    const result = await addClinicianAvailabilty(payload);
+    console.log(result);
+    getAvailability();
+    setAvailabilityType("Select");
+    setTimeSlots([{ day: "Saturday", start: "", end: "" }]);
+  };
+
+  // ── Edit handlers ──
+  const handleEditClick = (leave) => {
+    setEditingId(leave.id);
+    setEditRow({
+      day: leave.day,
+      time: toInputTime(leave.time),
+      endTime: toInputTime(leave.endTime),
+    });
+  };
+
+  const handleEditChange = (field, value) => {
+    setEditRow((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleEditSave = async (leave) => {
+    const payload = {
+      availabilityType: leave.availabilityType,
+      day: editRow.day,
+      time: formatTime(editRow.time),
+      endTime: formatTime(editRow.endTime),
+      userId: String(userData.id),
+    };
+
+    const result = await updateClinicianAvailability(leave.id, payload);
+    console.log("Update result:", result);
+    setEditingId(null);
+    getAvailability();
+  };
+
+  const handleEditCancel = () => {
+    setEditingId(null);
+    setEditRow({ day: "", time: "", endTime: "" });
+  };
+
   return (
-    <div className="w-full flex flex-row gap-6 px-8">
-      <div className="w-1/4 flex flex-col gap-4  space-y-4">
+    <div className="w-full flex flex-row gap-20 px-8">
+      {/* Left - Add form (same as before) */}
+      <div className="w-1/3 flex flex-col gap-4 space-y-4">
         <div>
-          <label className="block mb-4 text-[#5A5A5A] font-semibold text-sm text-start ">
+          <label className="block mb-4 text-[#5A5A5A] font-semibold text-sm text-start">
             Availability type
           </label>
           <select
-            className="w-full border outline-none text-sm text-[#5A5A5A] border-[#E1E1E1]  rounded p-2"
+            className="w-full border outline-none text-sm text-[#5A5A5A] border-[#E1E1E1] rounded p-2"
             value={availabilityType}
             onChange={(e) => setAvailabilityType(e.target.value)}
           >
@@ -126,11 +162,10 @@ const Availability = () => {
                   ))}
                 </select>
               )}
-
-              {/* Time inputs */}
               <input
                 type="time"
-                className="flex-1 border text-sm text-[#5A5A5A] outline-none border-[#E1E1E1] rounded p-2"
+                step="60"
+                className="flex-1 min-w-32 border text-sm text-[#5A5A5A] outline-none border-[#E1E1E1] rounded p-2"
                 value={slot.start}
                 onChange={(e) =>
                   handleSlotChange(index, "start", e.target.value)
@@ -138,12 +173,11 @@ const Availability = () => {
               />
               <input
                 type="time"
-                className="flex-1 border text-sm text-[#5A5A5A] outline-none border-[#E1E1E1] rounded p-2"
+                step="60"
+                className="flex-1 min-w-32 border text-sm text-[#5A5A5A] outline-none border-[#E1E1E1] rounded p-2"
                 value={slot.end}
                 onChange={(e) => handleSlotChange(index, "end", e.target.value)}
               />
-
-              {/* Plus button only for Specific day */}
               {availabilityType === "Specific day" &&
                 index === timeSlots.length - 1 && (
                   <button
@@ -168,29 +202,107 @@ const Availability = () => {
         </div>
       </div>
 
-      {/* Right Table */}
-      <div className="w-3/6 mt-[4.5rem] flex justify-center">
+      {/* Right - Table with inline edit */}
+      <div className="w-2/3 mt-[4.5rem] flex justify-center">
         {availability?.length === 0 ? (
           <p className="text-gray-500">No data available</p>
         ) : (
           <table className="min-w-full border border-[#E1E1E1] text-sm">
-            <thead className="bg-gray-50 text-left text-[#5A5A5A] font-semibold">
-              <tr className="border-[#E1E1E1]">
+            <thead className="bg-gray-50 text-[#5A5A5A] font-semibold">
+              <tr>
                 <th className="p-2 border border-[#E1E1E1]">Day</th>
                 <th className="p-2 border border-[#E1E1E1]">Start</th>
                 <th className="p-2 border border-[#E1E1E1]">End</th>
+                <th className="p-2 border border-[#E1E1E1]">Action</th>
               </tr>
             </thead>
             <tbody>
-              {availability?.map((leave) => (
-                <tr key={leave?.id} className="border-t border-[#E1E1E1]">
-                  <td className="p-2 border border-[#E1E1E1]">{leave?.day}</td>
-                  <td className="p-2 border border-[#E1E1E1]">{leave?.time}</td>
-                  <td className="p-2 border border-[#E1E1E1]">
-                    {leave?.endTime}
-                  </td>
-                </tr>
-              ))}
+              {availability?.map((leave) =>
+                editingId === leave.id ? (
+                  // ── Editing Row ──
+                  <tr
+                    key={leave.id}
+                    className="border-t border-[#E1E1E1] bg-blue-50"
+                  >
+                    <td className="p-2 border border-[#E1E1E1]">
+                      <select
+                        className="border border-[#E1E1E1] rounded p-1 text-sm outline-none"
+                        value={editRow.day}
+                        onChange={(e) =>
+                          handleEditChange("day", e.target.value)
+                        }
+                      >
+                        {days.map((day) => (
+                          <option key={day}>{day}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="p-2 border border-[#E1E1E1]">
+                      <input
+                        type="time"
+                        step="60"
+                        className="border border-[#E1E1E1] rounded p-1 text-sm outline-none"
+                        value={editRow.time}
+                        onChange={(e) =>
+                          handleEditChange("time", e.target.value)
+                        }
+                      />
+                    </td>
+                    <td className="p-2 border border-[#E1E1E1]">
+                      <input
+                        type="time"
+                        step="60"
+                        className="border border-[#E1E1E1] rounded p-1 text-sm outline-none"
+                        value={editRow.endTime}
+                        onChange={(e) =>
+                          handleEditChange("endTime", e.target.value)
+                        }
+                      />
+                    </td>
+                    <td className="p-2 border border-[#E1E1E1]">
+                      <div className="flex gap-2 justify-center">
+                        <button
+                          onClick={() => handleEditSave(leave)}
+                          className="text-green-600 hover:text-green-800 transition"
+                          title="Save"
+                        >
+                          <FaCheck />
+                        </button>
+                        <button
+                          onClick={handleEditCancel}
+                          className="text-red-400 hover:text-red-600 transition"
+                          title="Cancel"
+                        >
+                          <FaTimes />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  // ── Normal Row ──
+                  <tr
+                    key={leave.id}
+                    className="border-t border-[#E1E1E1] hover:bg-gray-50"
+                  >
+                    <td className="p-2 border border-[#E1E1E1]">{leave.day}</td>
+                    <td className="p-2 border border-[#E1E1E1]">
+                      {leave.time}
+                    </td>
+                    <td className="p-2 border border-[#E1E1E1]">
+                      {leave.endTime}
+                    </td>
+                    <td className="p-2 border border-[#E1E1E1] text-center">
+                      <button
+                        onClick={() => handleEditClick(leave)}
+                        className="text-[#0A4863] hover:text-blue-800 transition"
+                        title="Edit"
+                      >
+                        <FaEdit />
+                      </button>
+                    </td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
         )}

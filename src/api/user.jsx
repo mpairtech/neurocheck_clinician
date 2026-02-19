@@ -53,6 +53,20 @@ const getCinicianAvailabilityById = async (userId) => {
   return data;
 };
 
+const updateClinicianAvailability = async (id, obj) => {
+  const response = await fetch(`${domain}/availabilities/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+    },
+    body: JSON.stringify(obj),
+  });
+
+  const data = await response.json();
+  return data;
+};
+
 const addClinicianLeave = async (obj) => {
   const response = await fetch(`${domain}/leaves`, {
     method: "POST",
@@ -95,6 +109,7 @@ export {
   addClinicianAvailabilty,
   addClinicianLeave,
   getLeavesById,
+  updateClinicianAvailability,
   getBillingInfo,
   getCinicianAvailabilityById,
   getUserById,

@@ -27,7 +27,7 @@ const DashboardHeader = ({ userData, stats, onLogout }) => {
       <div className="max-w-7xl mx-auto px-6 py-5">
         <div className="flex justify-between items-center">
           {/* LEFT */}
-          <div>
+          <div className="text-left">
             <h1 className="text-2xl font-bold text-slate-900">
               Good afternoon, {userData?.name || ""}
             </h1>
@@ -41,7 +41,7 @@ const DashboardHeader = ({ userData, stats, onLogout }) => {
           <div className="flex gap-3 items-center">
             <button
               onClick={handleGuidelineClick}
-              className="bg-emerald-600 p-2 rounded-lg text-white text-sm"
+              className="bg-emerald-600 p-2 rounded-lg text-white text-xs"
             >
               View Guidelines
             </button>

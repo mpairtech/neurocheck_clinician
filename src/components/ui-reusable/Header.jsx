@@ -49,7 +49,7 @@ const handleGuidelineClick = () => {
             {/* View Guidelines */}
             <button
               onClick={handleGuidelineClick}
-              className="bg-emerald-600 hover:bg-emerald-700 transition-colors px-3 py-2 rounded-lg text-white text-sm font-medium"
+              className="bg-emerald-600 hover:bg-emerald-700 transition-colors p-2 rounded-lg text-white text-xs font-medium"
             >
               View Guidelines
             </button>

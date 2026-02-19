@@ -31,7 +31,7 @@ console.log(userData)
   const day = today.toLocaleDateString("en-US", { weekday: "long" });
   const date = today.toLocaleDateString("en-US", {
     day: "2-digit",
-    month: "short",
+    month: "long",
   });
   const year = today.getFullYear();
 
@@ -51,7 +51,7 @@ console.log(userData)
 
         <div className="px-5 mt-6">
           <div className="w-full border-y border-[#E9E9E9] flex flex-col gap-1 my-3 py-4">
-            <p className="text-xs text-[#6C6C6C]">{day}</p>
+            <p className="text-sm text-[#6C6C6C]">{day}</p>
             <p className="text-3xl font-medium text-[#3B3B3B]">{date}</p>
             <p className="text-xs text-[#6C6C6C]">{year}</p>
           </div>

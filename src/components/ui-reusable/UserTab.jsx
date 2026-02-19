@@ -28,9 +28,10 @@ const UserTab = ({ tabs, selected, setSelected, title, description }) => {
   }, [userData?.id]);
 
   return (
-    <div className="">
-      <Header title={title} description={description} />
-
+    <div className="relative ">
+      <div className="fixed top-0 w-[84vw] z-0 bg-white shadow-sm">
+        <Header title={title} description={description} />
+      </div>
       {/* Optional: Display user info */}
       {/* {userDetails && (
         <div className="mb-4 p-3 bg-slate-50 rounded-lg">
@@ -42,23 +43,21 @@ const UserTab = ({ tabs, selected, setSelected, title, description }) => {
           </p>
         </div>
       )} */}
-      <div className="py-4">
-        
-
-      <div className="flex flex-row items-center gap-12 border-b border-[#E0E0E0] px-4">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setSelected(tab)}
-            className={`pb-2 text-xs cursor-pointer font-medium transition-colors duration-200 ${
-              selected === tab
-                ? "text-[#0A6876] cursor-pointer border-b-2 border-[#0A6876]"
-                : "text-gray-500"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+      <div className="pt-6 pb-2 mt-[12vh]">
+        <div className="flex flex-row items-center gap-12 border-b border-[#E0E0E0] px-4">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setSelected(tab)}
+              className={`pb-2 text-xs cursor-pointer font-medium transition-colors duration-200 ${
+                selected === tab
+                  ? "text-[#0A6876] cursor-pointer border-b-2 border-[#0A6876]"
+                  : "text-gray-500"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
       </div>
     </div>
