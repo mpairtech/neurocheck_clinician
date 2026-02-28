@@ -51,8 +51,9 @@ const AppointmentSection = () => {
           return acc;
         }, {}),
       );
+     
       setRecentSubmissions(groupedSubmissions);
-
+ console.log("submission", groupedSubmissions);
       // Fetch upcoming appointments
 
     const aptRes = await getAllappointments();

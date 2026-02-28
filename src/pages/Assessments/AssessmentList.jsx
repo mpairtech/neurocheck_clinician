@@ -71,6 +71,10 @@ const AssessmentList = () => {
   const fetchSubmissions = async () => {
     const res = await getAllsubmissions();
 
+    console.log("Total from API:", res?.payload?.length); 
+    console.log("My clinicianId:", userData?.id);
+    console.log("All clinicianIds:", res?.payload?.map((i) => i?.clinicianId),); 
+
     // const rawData = res?.payload?.filter(
     //   (i) =>
     //     i?.assessment?.type === "premium" &&
@@ -80,10 +84,9 @@ const AssessmentList = () => {
     const rawData = res?.payload?.filter(
       (i) =>
         i?.assessment?.type === "premium" &&
-        ["accepted", "completed"].includes(i?.status) &&
+        // ["accepted", "completed"].includes(i?.status) &&
         i?.clinicianId === Number(userData?.id),
     );
-
 
     const grouped = Object?.values(
       rawData?.reduce((acc, item) => {
@@ -112,7 +115,7 @@ const AssessmentList = () => {
         return acc;
       }, {}),
     );
-    console.log("submission",grouped);
+    console.log("submission", grouped);
 
     setSubmission(grouped);
   };

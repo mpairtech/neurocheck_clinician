@@ -16,7 +16,7 @@ const getAllanswers = async ({ patientId, assessmentId }) => {
 
 
 const getAllsubmissions = async () => {
-  const response = await fetch(`${domain}/submissions?page=1&limit=100`, {
+  const response = await fetch(`${domain}/submissions?page=1&limit=10000`, {
     method: "GET",
     headers: {
          authorization: `Bearer ${localStorage.getItem("accessToken")}`
