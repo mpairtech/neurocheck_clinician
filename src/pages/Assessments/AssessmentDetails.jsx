@@ -24,6 +24,8 @@ const AssessmentDetails = () => {
   const [feedbackModal, setFeedbackModal] = useState(false);
   const [notes, setNotes] = useState("");
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+
+  const [rawSubmissions, setRawSubmissions] = useState([]);
   
 
   /* ---------------- FETCH APPOINTMENTS ---------------- */
@@ -67,7 +69,8 @@ const AssessmentDetails = () => {
         return acc;
       }, {}),
     );
-
+    const payload = result?.payload || [];
+    setRawSubmissions(payload);
     setSubmission(grouped || []);
   };
 
@@ -263,11 +266,10 @@ const AssessmentDetails = () => {
               patientId={item.patient.id}
               assessmentId={item?.assessmentId}
               time={item.createdAt}
-
               score={item.score}
+              rawSubmissions={rawSubmissions}
             />
           ))}
-        
 
         {activeTab === "Consultancy Report" && (
           <ReportStructure
