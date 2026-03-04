@@ -26,6 +26,7 @@ const AssessmentDetails = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
 
   const [rawSubmissions, setRawSubmissions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   
 
   /* ---------------- FETCH APPOINTMENTS ---------------- */
@@ -79,7 +80,15 @@ const AssessmentDetails = () => {
   }, [patientId, assessmentId]);
 
   const data = submission[0];
-  if (!data) return <div className="p-6">Loading...</div>;
+  if (!data) return (
+    <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+
+        <p className="text-sm text-gray-500">Loading assessment details...</p>
+      </div>
+    </div>
+  );
 
   /* ---------------- TAB UTILS ---------------- */
   const index = tabs.indexOf(activeTab);

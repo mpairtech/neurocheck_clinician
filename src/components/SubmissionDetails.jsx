@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { getAllanswers, getSubmissionByPatientId } from "../api/assessment";
 import TextAns from "./ui-reusable/TextAns";
@@ -15,11 +14,14 @@ const SubmissionDetails = ({
   const [patient, setPatient] = useState(null);
   const [activeType, setActiveType] = useState("");
   const [submissions, setSubmissions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!patientId) return;
 
     const fetchData = async () => {
+      setIsLoading(true);
+
       // Step 1: get all questionTypes (same as AI Summary)
       const submissionRes = await getSubmissionByPatientId(
         patientId,
@@ -32,7 +34,6 @@ const SubmissionDetails = ({
       setSubmissions(raw);
 
       // Extract ordered questionType names (same order as AI Summary)
-      
 
       const answersRes = await getAllanswers({ patientId, assessmentId });
       const answersRaw = answersRes?.payload || [];
@@ -55,11 +56,25 @@ const SubmissionDetails = ({
       setAnswers(grouped);
       setQuestionTypes(typeNames);
       setActiveType(typeNames[0]);
+      setIsLoading(false);
     };
     fetchData();
   }, [patientId, assessmentId]);
 
   if (!patient) return null;
+
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center pt-20 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+      
+        <p className="text-sm text-gray-500">Loading assessment details...</p>
+        </div>
+        </div>
+    );
+  }
 
   const activeAnswers = answers[activeType] || [];
   const isActiveTypeExternal = activeAnswers.some(
@@ -70,13 +85,13 @@ const SubmissionDetails = ({
     (s) =>
       s.questionType?.trim().toLowerCase() === activeType?.trim().toLowerCase(),
   );
-  
+
   // console.log("activeType:", JSON.stringify(activeType));
   // console.log(
   //   "rawSub types:",
   //   rawSubmissions.map((s) => JSON.stringify(s.questionType)),
   // );
- 
+
   // console.log("matchedSubmission:", matchedSubmission);
   // console.log("isActiveTypeExternal:", isActiveTypeExternal);
 
@@ -86,7 +101,6 @@ const SubmissionDetails = ({
       {/* <h2 className="font-semibold text-left pb-2">Question Categories</h2> */}
 
       <div className="flex gap-2 mt-0 overflow-x-auto tab-scroll max-w-[79vw] border p-3 rounded-md bg-white">
-  
         {questionTypes.map((type) => {
           const isExternalType = answers[type]?.some(
             (ans) => ans.question?.variant === "external",
@@ -149,18 +163,9 @@ const SubmissionDetails = ({
                 <p className="text-sm">
                   <span className="font-semibold">Answer</span> {ans.answer}
                 </p>
-                {/* <p className="text-xs text-gray-600">
-                  <span className="font-semibold">Source:</span>{" "}
-                  {ans.extraInfo?.source || "N/A"}
-                </p>
-                <p className="text-xs text-gray-600">
-                  <span className="font-semibold">Remarks:</span>{" "}
-                  {ans.extraInfo?.remarks || "N/A"}
-                </p> */}
               </div>
             );
           }
-          
 
           return (
             <TextAns
@@ -173,6 +178,6 @@ const SubmissionDetails = ({
       </div>
     </div>
   );
-};;;
+};;
 
 export default SubmissionDetails;
