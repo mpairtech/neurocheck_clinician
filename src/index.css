@@ -10,3 +10,14 @@ body {
   font-family: "Inter", sans-serif !important;
   
 }
+
+.tab-scroll::-webkit-scrollbar {
+  height: 3px;
+}
+.tab-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.tab-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 999px;
+}

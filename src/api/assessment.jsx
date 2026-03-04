@@ -1,17 +1,35 @@
 import { domain } from "../../credentials";
 
 const getAllanswers = async ({ patientId, assessmentId }) => {
-  //console.log("o",patientId)
-  const response = await fetch(`${domain}/answers?patientId=${Number(patientId)}&assessmentId=${assessmentId}&limit=100`, {
-    method: "GET",
-    headers: {
-      authorization: `Bearer ${localStorage.getItem("accessToken")}`
-      // Authorization: `Bearer ${token}`,
-    },
-  });
+  let allData = [];
+  let page = 1;
+  let hasMore = true;
 
-  const data = await response.json();
-  return data;
+  while (hasMore) {
+    const response = await fetch(
+      `${domain}/answers?patientId=${Number(patientId)}&assessmentId=${assessmentId}&limit=100&page=${page}`,
+      {
+        method: "GET",
+        headers: {
+          authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      },
+    );
+
+    const data = await response.json();
+    const payload = data?.payload || [];
+
+    allData = [...allData, ...payload];
+
+   
+    if (payload.length < 100) {
+      hasMore = false; 
+    } else {
+      page++;
+    }
+  }
+
+  return { payload: allData };
 };
 
 

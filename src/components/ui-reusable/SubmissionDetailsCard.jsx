@@ -21,6 +21,7 @@ const SubmissionDetailsCard = ({
   patientId,
 }) => {
   console.log("summary", summary);
+ 
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
