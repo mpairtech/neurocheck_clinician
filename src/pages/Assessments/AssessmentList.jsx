@@ -3,7 +3,7 @@ import AssessmentCard from "../../components/ui-reusable/AssesmentCard";
 import { useContext, useEffect, useState } from "react";
 import RatingModal from "../../components/RatingModal";
 import SubmissionDetails from "../../components/SubmissionDetails";
-import { getAllsubmissions, updateStatus } from "../../api/assessment";
+import { getAllSubmissions, updateStatus } from "../../api/assessment";
 import { AuthContext } from "../../Provider/AuthProvider";
 import { FaSearch } from "react-icons/fa";
 import { BiSortAlt2 } from "react-icons/bi";
@@ -69,7 +69,7 @@ const AssessmentList = () => {
   };
 
   const fetchSubmissions = async () => {
-    const res = await getAllsubmissions();
+    const res = await getAllSubmissions();
 
     console.log("Total from API:", res?.payload?.length); 
     console.log("My clinicianId:", userData?.id);

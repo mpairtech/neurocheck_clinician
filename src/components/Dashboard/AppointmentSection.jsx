@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from "react";
 import { HiClock } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../Provider/AuthProvider";
-import { getAllsubmissions,getAllappointments  } from "../../api/assessment";
+import { getAllSubmissions ,getAllappointments  } from "../../api/assessment";
 import { getAge } from "../utils/ageConverter";
 
 
@@ -25,7 +25,7 @@ const AppointmentSection = () => {
 
     try {
       // Fetch recent submissions
-      const res = await getAllsubmissions();
+      const res = await getAllSubmissions();
       const rawSubmissions = res?.payload?.filter(
         (item) =>
           item?.assessment?.type === "premium" &&

@@ -33,28 +33,62 @@ const getAllanswers = async ({ patientId, assessmentId }) => {
 };
 
 
-const getAllsubmissions = async () => {
-  const response = await fetch(`${domain}/submissions?page=1&limit=10000`, {
-    method: "GET",
-    headers: {
-         authorization: `Bearer ${localStorage.getItem("accessToken")}`
-    },
-  });
+const getAllSubmissions = async () => {
+  let allSubmissions = [];
+  let page = 1;
+  const limit = 100;
 
-  const data = await response.json();
-  return data;
+  while (true) {
+    const response = await fetch(
+      `${domain}/submissions?page=${page}&limit=${limit}`,
+      {
+        method: "GET",
+        headers: {
+          authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      },
+    );
+
+    const data = await response.json();
+    if (!Array.isArray(data.payload) || data.payload.length === 0) break;
+
+    allSubmissions = [...allSubmissions, ...data.payload];
+    page += 1;
+  }
+
+  return { payload: allSubmissions };
 };
 
-const getSubmissionByPatientId = async (patientId,assessmentId) => {
-  const response = await fetch(`${domain}/submissions?patientId=${patientId}&assessmentId=${assessmentId}`, {
-    method: "GET",
-    headers: {
-         authorization: `Bearer ${localStorage.getItem("accessToken")}`
-    },
-  });
+const getSubmissionByPatientId = async (patientId, assessmentId) => {
+  let allData = [];
+  let page = 1;
+  let hasMore = true;
 
-  const data = await response.json();
-  return data;
+   while (hasMore) {
+     const response = await fetch(
+       `${domain}/submissions?patientId=${patientId}&assessmentId=${assessmentId}&limit=100&page=${page}`,
+       {
+         method: "GET",
+         headers: {
+           authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+         },
+       },
+     );
+
+     const data = await response.json();
+
+     const payload = data?.payload || [];
+
+     allData = [...allData, ...payload];
+
+     if (payload.length < 100) {
+       hasMore = false;
+     } else {
+       page++;
+     }
+   }
+
+   return { payload: allData };
 };
 
 const getSubmissionById = async (patientId) => {
@@ -177,19 +211,49 @@ const updateSchedule = async (id,obj) => {
 };
 
 
+// question categoires
+const getAllQuestionCategories = async () => {
+  let page = 1;
+  let limit = 100;
+  let allCategories = [];
+  let hasMore = true;
 
+  while (hasMore) {
+    const response = await fetch(
+      `${domain}/question-categories?page=${page}&limit=${limit}`,
+      {
+        method: "GET",
+        headers: {
+          authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      },
+    );
+
+    const data = await response.json();
+
+    if (Array.isArray(data.payload) && data.payload.length > 0) {
+      allCategories = [...allCategories, ...data.payload];
+      page++;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return { payload: allCategories };
+};
 
 
 
 export {
   getAllanswers,
   getSubmissionByPatientId,
-  getAllsubmissions,
+  getAllSubmissions,
   updateStatus,
   addPrescription,
   getSubmissionByClinicianId,
   addAppointment,
   getAllappointments,
   updateSchedule,
-  getSubmissionById 
+  getSubmissionById,
+  getAllQuestionCategories,
 };
