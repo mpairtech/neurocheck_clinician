@@ -1,4 +1,6 @@
 const ReportStructure = ({ data = {}, submission = [] }) => {
+  console.log(data);
+  console.log(submission);
   
   return (
     <div className="w-full text-gray-900 font-sans">

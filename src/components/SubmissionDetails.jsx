@@ -203,8 +203,10 @@ const SubmissionDetails = ({
   // ─── Step 1: rawSubmissions থেকে activeSubmission set (first by default) ───
   useEffect(() => {
     if (!rawSubmissions.length) return;
-    setActiveSubmission(rawSubmissions[0]);
+    console.log(rawSubmissions);
+  setActiveSubmission(rawSubmissions[0]);
   }, [rawSubmissions]);
+  
 
   // ─── Step 2: answers fetch ───
   useEffect(() => {
@@ -267,7 +269,7 @@ const SubmissionDetails = ({
 
   return (
     <div className="px-4">
-      {/* ── Question Type Tabs ── */}
+      {/* ── Question Type  ── */}
       <div className="flex gap-2 mt-0 overflow-x-auto tab-scroll max-w-[79vw] border p-3 rounded-md bg-white">
         {rawSubmissions.map((sub, idx) => {
           const type = sub.questionType?.trim();

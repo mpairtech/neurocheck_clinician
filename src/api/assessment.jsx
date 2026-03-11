@@ -174,6 +174,23 @@ const addAppointment = async (obj) => {
   return data;
 };
 
+const updateAppointment = async (id,obj) => {
+
+  const response = await fetch(`${domain}/appointments/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+    },
+    body: JSON.stringify(obj),
+  });
+
+  const data = await response.json();
+  //console.log("data", data);
+
+  return data;
+};
+
 
 
 
@@ -252,6 +269,7 @@ export {
   addPrescription,
   getSubmissionByClinicianId,
   addAppointment,
+  updateAppointment,
   getAllappointments,
   updateSchedule,
   getSubmissionById,

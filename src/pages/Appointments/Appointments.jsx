@@ -1,4 +1,4 @@
-import { getAllappointments, updateSchedule } from "../../api/assessment";
+import { getAllappointments, updateSchedule , updateAppointment } from "../../api/assessment";
 import Header from "../../components/ui-reusable/Header";
 import { formatDate } from "../../components/utils/formateDate";
 import { AuthContext } from "../../Provider/AuthProvider";
@@ -101,11 +101,13 @@ const Appointments = () => {
     fetchAppointments();
   };
 
-  const handleSubmitFeedback = async (e) => {
-    e.preventDefault();
-    setFeedbackModal(false);
-    fetchAppointments();
-  };
+ const handleSubmitFeedback = async (e) => {
+   e.preventDefault();
+   await updateAppointment(selectedAppointment?.id, { feedback: notes });
+
+   setFeedbackModal(false);
+   fetchAppointments();
+ };
 
   // ✅ New: Update call status
   const handleUpdateCallStatus = async (e) => {
