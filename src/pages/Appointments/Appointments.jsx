@@ -12,6 +12,8 @@ import { BiSortAlt2 } from "react-icons/bi";
 import { HiCheckCircle, HiXCircle, HiClock } from "react-icons/hi";
 import Modal from "../../components/ui-reusable/Modal";
 import { IoFilter } from "react-icons/io5";
+import { convertToUTC, formatLondonTime } from "../../components/utils/timeConvertforUTC";
+
 
 const statusColors = {
   Confirmed: "bg-green-100 text-green-700 border-green-200",
@@ -29,6 +31,8 @@ const callStatusColors = {
   Missed: "text-red-600 bg-red-50", //patient didn't joined
 };
 
+
+
 const Appointments = () => {
   const { userData } = useContext(AuthContext) || {};
   const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -43,6 +47,8 @@ const Appointments = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [newCallStatus, setNewCallStatus] = useState(""); // ✅ New
+
+  const [rescheduleTimezone, setRescheduleTimezone] = useState("Europe/London");
 
   const fetchAppointments = async () => {
     const res = await getAllappointments();
@@ -63,6 +69,7 @@ const Appointments = () => {
 
   const closeRescheduleModal = () => {
     setRescheduleModal(false);
+    setRescheduleTimezone("Europe/London"); // ✅ reset
   };
 
   const closeFeedBackModal = () => {
@@ -85,21 +92,53 @@ const Appointments = () => {
       return;
     }
 
+
+
     const payload = {
       userId: selectedAppointment?.userId,
       patientId: selectedAppointment?.patientId,
-      time: appointmentDate,
+      time: appointmentDate
+        ? convertToUTC(appointmentDate, rescheduleTimezone)
+        : null,
+      timezone: rescheduleTimezone,
       clinicianId: selectedAppointment?.clinicianId,
       status: "Rescheduled",
       metting_status: "Scheduled",
       tries: (selectedAppointment?.tries || 0) + 1,
     };
 
-    const result = await updateSchedule(selectedAppointment?.id, payload);
-
+    await updateSchedule(selectedAppointment?.id, payload);
     setRescheduleModal(false);
     fetchAppointments();
   };
+
+
+  
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+
+  //   if (selectedAppointment?.tries >= 3) {
+  //     alert(
+  //       "This patient has already reached the maximum number of reschedules (3).",
+  //     );
+  //     return;
+  //   }
+
+  //   const payload = {
+  //     userId: selectedAppointment?.userId,
+  //     patientId: selectedAppointment?.patientId,
+  //     time: appointmentDate,
+  //     clinicianId: selectedAppointment?.clinicianId,
+  //     status: "Rescheduled",
+  //     metting_status: "Scheduled",
+  //     tries: (selectedAppointment?.tries || 0) + 1,
+  //   };
+
+  //   const result = await updateSchedule(selectedAppointment?.id, payload);
+
+  //   setRescheduleModal(false);
+  //   fetchAppointments();
+  // };
 
  const handleSubmitFeedback = async (e) => {
    e.preventDefault();
@@ -252,6 +291,7 @@ const Appointments = () => {
                           hour: "2-digit",
                           minute: "2-digit",
                           hour12: true,
+                          timeZone: "Europe/London",
                         })}
                       </p>
                     </td>
@@ -472,6 +512,7 @@ const Appointments = () => {
                         hour: "2-digit",
                         minute: "2-digit",
                         hour12: true,
+                        timeZone: "Europe/London",
                       },
                     )}
                   </p>
@@ -513,6 +554,22 @@ const Appointments = () => {
             title="Reschedule Appointment"
           >
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Timezone
+                </label>
+                <select
+                  value={rescheduleTimezone}
+                  onChange={(e) => setRescheduleTimezone(e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-lg 
+                     bg-slate-50 text-sm focus:outline-none 
+                     focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="Europe/London">UK Time — auto GMT/BST</option>
+                  <option value="UTC">UTC</option>
+                </select>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Select New Date & Time

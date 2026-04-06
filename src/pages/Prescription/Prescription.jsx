@@ -5,6 +5,9 @@ import { formatDate } from "../../components/utils/formateDate";
 import { AuthContext } from "../../Provider/AuthProvider";
 import { useParams, useNavigate } from "react-router-dom";
 import { useContext, useEffect, useState } from "react";
+import { convertToUTC, formatLondonTime } from "../../components/utils/timeConvertforUTC";
+
+
 
 const Prescription = () => {
   const [patientDetailsById, setPatientDetailsById] = useState([]);
@@ -15,6 +18,9 @@ const Prescription = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [needsAppointment, setNeedsAppointment] = useState(false);
   const [appointmentDate, setAppointmentDate] = useState("");
+
+  const [selectedTimezone, setSelectedTimezone] = useState("Europe/London");
+
 
   const { id } = useParams();
   const navigate = useNavigate();
@@ -30,32 +36,38 @@ const Prescription = () => {
     getSubmissionDetails();
   }, [id]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+ 
+ const handleSubmit = async (e) => {
+   e.preventDefault();
 
-    const payload = {
-      userId: patientDetailsById?.[0]?.userId,
-      patientId: patientDetailsById?.[0]?.patientId,
-      time: appointmentDate,
-      clinicianId: userData?.id,
-      diagnosis: diagnosis,
-      notes_from_review: notes,
-      status: "Confirmed",
-      metting_status: "Scheduled",
-      tries: 1,
-    };
+   const timeAsUTC = needsAppointment
+     ? convertToUTC(appointmentDate, selectedTimezone)
+     : null;
 
-    const result = await addAppointment(payload);
+   const payload = {
+     userId: patientDetailsById?.[0]?.userId,
+     patientId: patientDetailsById?.[0]?.patientId,
+     time: timeAsUTC, // ✅ correct
+     timezone: selectedTimezone,
+     clinicianId: userData?.id,
+     diagnosis,
+     notes_from_review: notes,
+     status: "Confirmed",
+     metting_status: "Scheduled",
+     tries: 1,
+   };
 
-    if (result) {
-      setMeds([]);
-      setNotes("");
-      setDiagnosis("");
-      setAppointmentDate("");
-      setNeedsAppointment(false);
-      setShowSuccessModal(true);
-    }
-  };
+   const result = await addAppointment(payload);
+
+   if (result) {
+     setMeds([]);
+     setNotes("");
+     setDiagnosis("");
+     setAppointmentDate("");
+     setNeedsAppointment(false);
+     setShowSuccessModal(true);
+   }
+ };
 
   const handleGoToDashboard = () => {
     setShowSuccessModal(false);
@@ -162,7 +174,7 @@ const Prescription = () => {
             Select this if you want to schedule a follow-up appointment.
           </p>
 
-          {needsAppointment && (
+          {/* {needsAppointment && (
             <div className="relative w-full lg:w-4/6 mt-4">
               <input
                 type="datetime-local"
@@ -172,7 +184,59 @@ const Prescription = () => {
                 required={needsAppointment}
               />
             </div>
+          )} */}
+
+          {needsAppointment && (
+            <div className="w-full lg:w-4/6 mt-4 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-[#3B3B3B] mb-1">
+                  Timezone
+                </label>
+                <select
+                  value={selectedTimezone}
+                  onChange={(e) => setSelectedTimezone(e.target.value)}
+                  className="w-full pl-4 py-2 border border-[#E2E2E2] rounded
+                   bg-[#F9F9F9] text-sm focus:outline-none
+                   focus:ring-2 focus:ring-[#0A4863]"
+                >
+                  <option value="Europe/London">UK Time — auto GMT/BST</option>
+                  <option value="UTC">UTC</option>
+                </select>
+              </div>
+
+              <input
+                type="datetime-local"
+                value={appointmentDate}
+                onChange={(e) => setAppointmentDate(e.target.value)}
+                className="w-full pl-4 pr-10 py-2 border border-[#E2E2E2] rounded
+                 bg-[#F9F9F9] text-sm text-gray-700 focus:outline-none
+                 focus:ring-2 focus:ring-[#0A4863]"
+                required={needsAppointment}
+              />
+
+              {/* ✅ Live preview — user confirm করতে পারবে */}
+              {appointmentDate && (
+                <div className="p-2 bg-blue-50 border border-blue-100 rounded text-xs text-blue-800">
+                  <p>
+                    🕐 UTC (saved to DB):{" "}
+                    <strong>
+                      {convertToUTC(appointmentDate, selectedTimezone)}
+                    </strong>
+                  </p>
+                  <p className="mt-1">
+                    🇬🇧 London display:{" "}
+                    <strong>
+                      {formatLondonTime(
+                        convertToUTC(appointmentDate, selectedTimezone),
+                      )}
+                    </strong>
+                  </p>
+                </div>
+              )}
+            </div>
           )}
+
+
         </div>
 
         <div className="mt-8 mb-9">
