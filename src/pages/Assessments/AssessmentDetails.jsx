@@ -105,90 +105,351 @@ const AssessmentDetails = () => {
   const hasAppointmentForPatient = Boolean(patientAppointment);
 
   const isReportGenerated =
-    patientAppointment?.status?.toString().trim().toLowerCase() === "confirmed";
+    patientAppointment?.status?.toString().trim().toLowerCase() === "completed";
 
-  const hasFeedback = patientAppointment?.feedback !== null;
+  const hasFeedback = patientAppointment?.feedback.trim();
 
   /* ---------------- PDF GENERATE ---------------- */
-  const generateConsultancyReport = () => {
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
+  // const generateConsultancyReport = () => {
+  //   const doc = new jsPDF({ unit: "pt", format: "a4" });
 
-    let y = 40;
+  //   let y = 40;
 
-    /* ================= TITLE ================= */
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.text("Consultancy Report", 40, y);
+  //   /* ================= TITLE ================= */
+  //   doc.setFont("helvetica", "bold");
+  //   doc.setFontSize(18);
+  //   doc.text("Consultancy Report", 40, y);
 
-    y += 25;
+  //   y += 25;
 
-    /* ================= MAIN INFO TABLE ================= */
-    autoTable(doc, {
-      startY: y,
-      body: [
-        ["Patient Name", data.patient.name],
-        ["Age", `${getAge(data.patient.dateOfBirth)} years`],
-        ["Demographics", data.patient.demographics || ""],
-        ["Clinician Diagnosis", patientAppointment?.diagnosis || ""],
-        [
-          "Clinician Notes from Review",
-          patientAppointment?.notes_from_review || "",
-        ],
-        [
-          "Clinician Notes Post Consultation",
-          patientAppointment?.feedback || "",
-        ],
-      ],
-      theme: "grid",
-      styles: {
-        fontSize: 10,
-        cellPadding: 8,
-        valign: "top",
-      },
-      columnStyles: {
-        0: { cellWidth: 180, fontStyle: "bold", fillColor: [245, 245, 245] },
-        1: { cellWidth: 330 },
-      },
-    });
+  //   /* ================= MAIN INFO TABLE ================= */
+  //   autoTable(doc, {
+  //     startY: y,
+  //     body: [
+  //       ["Patient Name", data.patient.name],
+  //       ["Age", `${getAge(data.patient.dateOfBirth)} years`],
+  //       ["Demographics", data.patient.demographics || ""],
+  //       ["Clinician Diagnosis", patientAppointment?.diagnosis || ""],
+  //       [
+  //         "Clinician Notes from Review",
+  //         patientAppointment?.notes_from_review || "",
+  //       ],
+  //       [
+  //         "Clinician Notes Post Consultation",
+  //         patientAppointment?.feedback || "",
+  //       ],
+  //     ],
+  //     theme: "grid",
+  //     styles: {
+  //       fontSize: 10,
+  //       cellPadding: 8,
+  //       valign: "top",
+  //     },
+  //     columnStyles: {
+  //       0: { cellWidth: 180, fontStyle: "bold", fillColor: [245, 245, 245] },
+  //       1: { cellWidth: 330 },
+  //     },
+  //   });
 
-    y = doc.lastAutoTable.finalY + 20;
+  //   y = doc.lastAutoTable.finalY + 20;
 
-    /* ================= SUMMARY SECTIONS ================= */
-    submission.forEach((item) => {
-      item.summaries?.forEach((summary) => {
-        // Section Title
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(13);
-        doc.text(summary.questionType, 40, y);
+  //   /* ================= SUMMARY SECTIONS ================= */
+  //   submission.forEach((item) => {
+  //     item.summaries?.forEach((summary) => {
+  //       // Section Title
+  //       doc.setFont("helvetica", "bold");
+  //       doc.setFontSize(13);
+  //       doc.text(summary.questionType, 40, y);
 
-        y += 10;
+  //       y += 10;
 
-        // Section Body
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
+  //       // Section Body
+  //       doc.setFont("helvetica", "normal");
+  //       doc.setFontSize(10);
 
-        const cleanText =
-          summary.summary
-            ?.replace(/[*#_`>]+/g, "")
-            ?.replace(/-{3,}/g, "")
-            ?.trim() || "";
+  //       const cleanText =
+  //         summary.summary
+  //           ?.replace(/[*#_`>]+/g, "")
+  //           ?.replace(/-{3,}/g, "")
+  //           ?.trim() || "";
 
-        const textLines = doc.splitTextToSize(cleanText, 520);
-        doc.text(textLines, 40, y);
+  //       const textLines = doc.splitTextToSize(cleanText, 520);
+  //       doc.text(textLines, 40, y);
 
-        y += textLines.length * 14 + 15;
+  //       y += textLines.length * 14 + 15;
 
-        // Page break
-        if (y > 760) {
-          doc.addPage();
-          y = 40;
-        }
-      });
-    });
+  //       // Page break
+  //       if (y > 760) {
+  //         doc.addPage();
+  //         y = 40;
+  //       }
+  //     });
+  //   });
 
-    /* ================= SAVE ================= */
-    doc.save("consultancy-report.pdf");
-  };
+  //   /* ================= SAVE ================= */
+  //   doc.save("consultancy-report.pdf");
+  // };
+
+ const generateConsultancyReport = () => {
+   const doc = new jsPDF({ unit: "pt", format: "a4" });
+   const W = 595;
+   const MARGIN = 30;
+   const CONTENT_W = W - MARGIN * 2;
+
+   doc.setFillColor(10, 61, 82);
+   doc.rect(0, 0, W, 72, "F");
+
+   doc.setFillColor(200, 168, 75);
+   doc.rect(0, 72, W, 3, "F");
+
+   doc.setFont("helvetica", "bold");
+   doc.setFontSize(20);
+   doc.setTextColor(255, 255, 255);
+   doc.text("NeuroCheck Pro", MARGIN, 32);
+
+   doc.setFont("helvetica", "normal");
+   doc.setFontSize(9);
+   doc.setTextColor(168, 208, 222);
+
+   doc.setFontSize(9);
+   doc.setTextColor(194, 221, 230);
+
+   doc.setFillColor(240, 246, 249);
+   doc.rect(0, 75, W, 38, "F");
+   doc.setDrawColor(208, 228, 236);
+   doc.setLineWidth(0.5);
+   doc.line(0, 113, W, 113);
+
+   const patientDate = new Date().toLocaleDateString("en-GB", {
+     day: "2-digit",
+     month: "short",
+     year: "numeric",
+   });
+
+   // Assessment removed from header
+   const fields = [
+     ["PATIENT NAME", data.patient.name],
+     ["AGE", `${getAge(data.patient.dateOfBirth)} yrs`],
+     ["DATE", patientDate],
+   ];
+
+   fields.forEach(([label, value], i) => {
+     const x = MARGIN + i * 130;
+     doc.setFont("helvetica", "normal");
+     doc.setFontSize(7.5);
+     doc.setTextColor(90, 122, 138);
+     doc.text(label, x, 88);
+     doc.setFont("helvetica", "bold");
+     doc.setFontSize(10);
+     doc.setTextColor(10, 61, 82);
+     doc.text(value || "—", x, 102);
+   });
+
+   const LEFT_W = 160;
+   const BODY_Y = 120;
+
+   doc.setDrawColor(208, 228, 236);
+   doc.setLineWidth(0.5);
+   doc.line(MARGIN + LEFT_W, BODY_Y, MARGIN + LEFT_W, 760);
+
+   const sectionLabel = (text, y) => {
+     doc.setFont("helvetica", "bold");
+     doc.setFontSize(7.5);
+     doc.setTextColor(90, 122, 138);
+     doc.text(text.toUpperCase(), MARGIN, y);
+     doc.setDrawColor(224, 238, 244);
+     doc.line(MARGIN, y + 3, MARGIN + LEFT_W - 8, y + 3);
+   };
+
+   const smallText = (text, x, y, maxW) => {
+     doc.setFont("helvetica", "normal");
+     doc.setFontSize(9);
+     doc.setTextColor(51, 51, 51);
+     const lines = doc.splitTextToSize(text, maxW);
+     doc.text(lines, x, y);
+     return lines.length * 12;
+   };
+
+   let ly = BODY_Y + 14;
+
+   // Assessment name moved to left column
+   sectionLabel("Assessment", ly);
+   ly += 10;
+   ly += smallText(data.assessment.name || "—", MARGIN, ly, LEFT_W - 8);
+   ly += 10;
+
+   sectionLabel("Diagnosis", ly);
+   ly += 10;
+
+   doc.setFont("helvetica", "bold");
+   doc.setFontSize(8.5);
+   doc.setTextColor(90, 122, 138);
+   doc.text("Primary", MARGIN, ly);
+   ly += 10;
+   ly += smallText(
+     patientAppointment?.diagnosis || "Pending",
+     MARGIN,
+     ly,
+     LEFT_W - 8,
+   );
+   ly += 6;
+
+   doc.setFont("helvetica", "bold");
+   doc.setFontSize(8.5);
+   doc.setTextColor(90, 122, 138);
+   doc.text("Score", MARGIN, ly);
+   ly += 10;
+   doc.setFont("helvetica", "bold");
+   doc.setFontSize(10);
+   doc.setTextColor(10, 61, 82);
+   doc.text(String(submission[0]?.score ?? "—"), MARGIN, ly);
+   ly += 16;
+
+   doc.setFont("helvetica", "bold");
+   doc.setFontSize(8.5);
+   doc.setTextColor(90, 122, 138);
+   doc.text("Demographics", MARGIN, ly);
+   ly += 10;
+   ly += smallText(data.patient.demographics || "—", MARGIN, ly, LEFT_W - 8);
+   ly += 12;
+
+   sectionLabel("Review Notes", ly);
+   ly += 10;
+   ly += smallText(
+     patientAppointment?.notes_from_review || "—",
+     MARGIN,
+     ly,
+     LEFT_W - 8,
+   );
+
+   // ── Rx SYMBOL ──
+   const RX = MARGIN + LEFT_W + 12;
+ doc.setFont("helvetica", "bold");
+ doc.setFontSize(20);
+ doc.setTextColor(10, 61, 82);
+ doc.text("Rx", RX, BODY_Y + 28);
+
+   // ── SUMMARIES HIDDEN ──
+
+   // ── POST-CONSULT NOTES + FEEDBACK BOX ──
+   let ry = BODY_Y + 46;
+   const RX_W = CONTENT_W - LEFT_W - 16;
+
+   const postConsultText = patientAppointment?.feedback
+     ? `${patientAppointment.feedback}`
+     : null;
+
+   const feedbackText = patientAppointment?.feedback || null;
+
+   if (postConsultText || feedbackText) {
+     ry += 4;
+     const RX_W = CONTENT_W - LEFT_W - 16;
+
+     // combine both into one box
+     const combinedLines = [];
+
+     if (patientAppointment?.feedback) {
+       combinedLines.push(
+         ...doc.splitTextToSize("Post-Consultation Notes", RX_W - 16),
+       );
+     }
+
+     // Build the box content
+     const noteLines = patientAppointment?.feedback
+       ? doc.splitTextToSize(patientAppointment.feedback, RX_W - 16)
+       : [];
+
+     const feedbackLines = patientAppointment?.feedback
+       ? doc.splitTextToSize(patientAppointment.feedback, RX_W - 16)
+       : [];
+
+     // POST-CONSULT NOTES box
+     if (patientAppointment?.feedback) {
+       const noteContent = doc.splitTextToSize(
+         patientAppointment.feedback,
+         RX_W - 16,
+       );
+       const boxH = noteContent.length * 11 + 24;
+
+       doc.setFillColor(248, 251, 253);
+       doc.setDrawColor(208, 228, 236);
+       doc.setLineWidth(0.5);
+       doc.roundedRect(RX, ry, RX_W, boxH, 3, 3, "FD");
+
+       doc.setFont("helvetica", "bold");
+       doc.setFontSize(7.5);
+       doc.setTextColor(90, 122, 138);
+       doc.text("POST-CONSULTATION NOTES", RX + 10, ry + 12);
+
+       doc.setFont("helvetica", "normal");
+       doc.setFontSize(9);
+       doc.setTextColor(51, 51, 51);
+       doc.text(noteContent, RX + 10, ry + 24);
+
+       ry += boxH + 10;
+     }
+
+     // FEEDBACK box
+     if (patientAppointment?.feedback) {
+       const fbContent = doc.splitTextToSize(
+         patientAppointment.feedback,
+         RX_W - 16,
+       );
+       const fbBoxH = fbContent.length * 11 + 24;
+
+       doc.setFillColor(240, 249, 244);
+       doc.setDrawColor(180, 220, 200);
+       doc.setLineWidth(0.5);
+       doc.roundedRect(RX, ry, RX_W, fbBoxH, 3, 3, "FD");
+
+       doc.setFont("helvetica", "bold");
+       doc.setFontSize(7.5);
+       doc.setTextColor(60, 140, 100);
+       doc.text("CLINICIAN FEEDBACK", RX + 10, ry + 12);
+
+       doc.setFont("helvetica", "normal");
+       doc.setFontSize(9);
+       doc.setTextColor(51, 51, 51);
+       doc.text(fbContent, RX + 10, ry + 24);
+
+       ry += fbBoxH + 12;
+     }
+   }
+
+   // ── FOOTER ──
+   const FOOTER_Y = 790;
+   doc.setFillColor(250, 252, 253);
+   doc.rect(0, FOOTER_Y - 10, W, 52, "F");
+   doc.setDrawColor(208, 228, 236);
+   doc.setLineWidth(0.5);
+   doc.line(0, FOOTER_Y - 10, W, FOOTER_Y - 10);
+
+   doc.setFont("helvetica", "normal");
+   doc.setFontSize(8);
+   doc.setTextColor(153, 153, 153);
+   const validity = doc.splitTextToSize(
+     "This prescription is valid for 30 days from date of issue. Dispensed by licensed pharmacy only.",
+     190,
+   );
+   doc.text(validity, MARGIN, FOOTER_Y + 4);
+
+   doc.setDrawColor(10, 61, 82);
+   doc.setLineWidth(0.5);
+   doc.line(W - MARGIN - 130, FOOTER_Y + 2, W - MARGIN, FOOTER_Y + 2);
+
+   doc.setFont("helvetica", "normal");
+   doc.setFontSize(8);
+   doc.setTextColor(90, 122, 138);
+   const clinicianLines = [`Dr. ${userData?.name || "Clinician"}`];
+   clinicianLines.forEach((line, i) => {
+     const tw = doc.getTextWidth(line);
+     doc.text(line, W - MARGIN - tw, FOOTER_Y + 14 + i * 11);
+   });
+
+   doc.save(
+     `prescription-${data.patient.name.replace(/\s+/g, "-").toLowerCase()}.pdf`,
+   );
+ };
 
   /* ---------------- FEEDBACK SUBMIT ---------------- */
   const closeFeedBackModal = () => {
@@ -316,16 +577,16 @@ const AssessmentDetails = () => {
 
           {isLast && (
             <>
-              {isReportGenerated && (
+              {/* {isReportGenerated && ( */}
                 <button
                   onClick={generateConsultancyReport}
                   className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
                 >
                   Download Report
                 </button>
-              )}
+              {/* )} */}
 
-              {isReportGenerated && !hasFeedback && (
+              {/* {isReportGenerated && !hasFeedback && ( */}
                 <button
                   onClick={() => {
                     setSelectedAppointment(patientAppointment);
@@ -335,7 +596,7 @@ const AssessmentDetails = () => {
                 >
                   Add Feedback
                 </button>
-              )}
+              {/* )} */}
 
               {!hasAppointmentForPatient && (
                 <button

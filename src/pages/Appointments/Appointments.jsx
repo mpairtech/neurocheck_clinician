@@ -13,9 +13,11 @@ import { HiCheckCircle, HiXCircle, HiClock } from "react-icons/hi";
 import Modal from "../../components/ui-reusable/Modal";
 import { IoFilter } from "react-icons/io5";
 import { convertToUTC, formatLondonTime } from "../../components/utils/timeConvertforUTC";
+import toast from "react-hot-toast";
 
 
 const statusColors = {
+  Completed: "bg-green-100 text-green-700 border-green-200",
   Confirmed: "bg-green-100 text-green-700 border-green-200",
   Rescheduled: "bg-orange-100 text-orange-700 border-orange-200",
   Cancelled: "bg-red-100 text-red-700 border-red-200",
@@ -184,6 +186,36 @@ const Appointments = () => {
     return matchesSearch && matchesFilter;
   });
 
+ 
+  
+  
+  const handleMarkCompleted = async (appt) => {
+    try {
+      // if (appt.metting_status !== "Resolved") {
+      //   alert("Complete the meeting first (set status to Resolved)");
+      //   return;
+      // }
+
+      if (!appt.feedback || !appt.feedback.trim()) {
+        toast("Please add feedback before completing");
+        return;
+      }
+
+      const payload = {
+        ...appt,
+        status: "Completed", 
+      };
+
+      await updateSchedule(appt.id, payload);
+
+      toast.success("Appointment marked as completed!");
+      fetchAppointments();
+    } catch (err) {
+      console.error(err);
+      toast("Failed to update status");
+    }
+  };
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 ">
       <Header
@@ -406,6 +438,28 @@ const Appointments = () => {
                                 : "text-slate-600 group-hover:text-orange-600"
                             }`}
                           />
+                        </button>
+
+                        <button
+                          onClick={() => handleMarkCompleted(appt)}
+                          className={`p-2 rounded-lg transition-colors group ${
+                            appt.metting_status === "Resolved" && appt.feedback
+                              ? "hover:bg-green-50"
+                              : "opacity-40 cursor-not-allowed"
+                          }`}
+                          title={
+                            appt.metting_status === "Resolved" && appt.feedback
+                              ? "Mark as Completed"
+                              : "Finish meeting & add feedback first"
+                          }
+                          disabled={
+                            !(
+                              appt.metting_status === "Resolved" &&
+                              appt.feedback
+                            )
+                          }
+                        >
+                          <HiCheckCircle className="w-5 h-5 text-green-600 group-hover:text-green-700" />
                         </button>
                       </div>
                     </td>
