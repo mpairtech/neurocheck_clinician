@@ -81,9 +81,11 @@ function tableRow(doc, label, value, y, opts = {}) {
   const valueX = opts.valueX ?? MARGIN + LABEL_W;
   const maxValW = opts.maxValW ?? CW - LABEL_W;
 
-  setDraw(doc, DIVIDER);
-  doc.setLineWidth(0.5);
-  doc.line(MARGIN, y, W - MARGIN, y);
+   if (!opts.skipTopLine) {
+     setDraw(doc, DIVIDER);
+     doc.setLineWidth(0.5);
+     doc.line(MARGIN, y, W - MARGIN, y);
+   }
   y += 15;
 
   doc.setFont("helvetica", "bold");
@@ -334,17 +336,21 @@ export function generateConsultancyReport({
   y = maybePageBreak(doc, y, 120);
   y = sectionHeading(doc, "Your Diagnosis", y);
 
+  
+
   const diagRows = [
-    ["Diagnosis", patientAppointment?.diagnosis || "Pending"],
+    ["Diagnosis", patientAppointment?.diagnosis || "—"],
     ["Diagnostic Code", patientAppointment?.icd_code || "—"],
-    ["Additional Diagnosis", patientAppointment?.secondary_diagnosis || "—"],
+    // ["Additional Diagnosis", patientAppointment?.secondary_diagnosis || "—"],
     ["Outcome", patientAppointment?.diagnostic_certainty || "—"],
+    ["Notes from Review", patientAppointment?.notes_from_review || "—"],
+    ["Post Consultation Notes", patientAppointment?.feedback || "—"],
   ];
 
-  diagRows.forEach(([label, value]) => {
-    y = maybePageBreak(doc, y, 30);
-    y = tableRow(doc, label, value, y);
-  });
+ diagRows.forEach(([label, value], i) => {
+   y = maybePageBreak(doc, y, 30);
+   y = tableRow(doc, label, value, y, { skipTopLine: i === 0 });
+ });
 //   y = tableClose(doc, y);
 
   // Diagnosis explanation (italic, indented)
@@ -384,8 +390,8 @@ export function generateConsultancyReport({
     ["Date", reportDateFormatted],
   ];
 
-  clinicianRows.forEach(([label, value]) => {
-    y3 = tableRow(doc, label, value, y3);
+  clinicianRows.forEach(([label, value], i) => {
+    y3 = tableRow(doc, label, value, y3, { skipTopLine: i === 0 });
   });
 //   tableClose(doc, y3);
 
