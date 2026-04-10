@@ -459,6 +459,7 @@ const AssessmentDetails = () => {
       submission,
       patientAppointment,
       userData,
+      rawSubmissions,
     });
   };
 
