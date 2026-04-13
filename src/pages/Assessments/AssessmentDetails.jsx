@@ -1,18 +1,21 @@
-import { getAllappointments, getSubmissionByPatientId, updateSchedule } from "../../api/assessment";
-import { useContext, useEffect, useState } from "react";
+import {
+  getAllappointments,
+  getSubmissionByPatientId,
+  updateSchedule,
+} from "../../api/assessment";
+import { useContext, useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Header from "../../components/ui-reusable/Header";
 import SubmissionDetailsCard from "../../components/ui-reusable/SubmissionDetailsCard";
 import SubmissionDetails from "../../components/SubmissionDetails";
 import { getAge } from "../../components/utils/ageConverter";
 import { AuthContext } from "../../Provider/AuthProvider";
-import ReportStructure from "../../components/ReportStructure";
+import ReportStructure from "../../components/Reports/ReportStructure";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Modal from "../../components/ui-reusable/Modal";
-import { generateConsultancyReport } from "../../components/utils/GenerateReport";
+import AssessmentReport from "./AssessmentReport";
 import PostConsultancyFeedbackForm from "../../components/Reports/PostConsultancyFeedbackForm";
-
 
 const tabs = ["AI Summary", "View Assessment details", "Consultancy Report"];
 
@@ -21,6 +24,7 @@ const AssessmentDetails = () => {
   const navigate = useNavigate();
   const { userData } = useContext(AuthContext) || {};
 
+  const reportRef = useRef(null);
   const [submission, setSubmission] = useState([]);
   const [appointment, setAppointment] = useState([]);
   const [activeTab, setActiveTab] = useState(tabs[0]);
@@ -30,7 +34,9 @@ const AssessmentDetails = () => {
 
   const [rawSubmissions, setRawSubmissions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-const [showReportForm, setShowReportForm] = useState(false);  
+  const [showReportForm, setShowReportForm] = useState(false);
+
+  const [previewModal, setPreviewModal] = useState(false);
 
   /* ---------------- FETCH APPOINTMENTS ---------------- */
   const fetchAppointments = async () => {
@@ -94,8 +100,6 @@ const [showReportForm, setShowReportForm] = useState(false);
       </div>
     );
 
- 
-
   /* ---------------- TAB UTILS ---------------- */
   const index = tabs.indexOf(activeTab);
   const isFirst = index === 0;
@@ -113,358 +117,25 @@ const [showReportForm, setShowReportForm] = useState(false);
   const isReportGenerated =
     patientAppointment?.status?.toString().trim().toLowerCase() === "completed";
 
-  const hasFeedback = patientAppointment?.feedback.trim();
-
-  /* ---------------- PDF GENERATE ---------------- */
-  // const generateConsultancyReport = () => {
-  //   const doc = new jsPDF({ unit: "pt", format: "a4" });
-
-  //   let y = 40;
-
-  //   /* ================= TITLE ================= */
-  //   doc.setFont("helvetica", "bold");
-  //   doc.setFontSize(18);
-  //   doc.text("Consultancy Report", 40, y);
-
-  //   y += 25;
-
-  //   /* ================= MAIN INFO TABLE ================= */
-  //   autoTable(doc, {
-  //     startY: y,
-  //     body: [
-  //       ["Patient Name", data.patient.name],
-  //       ["Age", `${getAge(data.patient.dateOfBirth)} years`],
-  //       ["Demographics", data.patient.demographics || ""],
-  //       ["Clinician Diagnosis", patientAppointment?.diagnosis || ""],
-  //       [
-  //         "Clinician Notes from Review",
-  //         patientAppointment?.notes_from_review || "",
-  //       ],
-  //       [
-  //         "Clinician Notes Post Consultation",
-  //         patientAppointment?.feedback || "",
-  //       ],
-  //     ],
-  //     theme: "grid",
-  //     styles: {
-  //       fontSize: 10,
-  //       cellPadding: 8,
-  //       valign: "top",
-  //     },
-  //     columnStyles: {
-  //       0: { cellWidth: 180, fontStyle: "bold", fillColor: [245, 245, 245] },
-  //       1: { cellWidth: 330 },
-  //     },
-  //   });
-
-  //   y = doc.lastAutoTable.finalY + 20;
-
-  //   /* ================= SUMMARY SECTIONS ================= */
-  //   submission.forEach((item) => {
-  //     item.summaries?.forEach((summary) => {
-  //       // Section Title
-  //       doc.setFont("helvetica", "bold");
-  //       doc.setFontSize(13);
-  //       doc.text(summary.questionType, 40, y);
-
-  //       y += 10;
-
-  //       // Section Body
-  //       doc.setFont("helvetica", "normal");
-  //       doc.setFontSize(10);
-
-  //       const cleanText =
-  //         summary.summary
-  //           ?.replace(/[*#_`>]+/g, "")
-  //           ?.replace(/-{3,}/g, "")
-  //           ?.trim() || "";
-
-  //       const textLines = doc.splitTextToSize(cleanText, 520);
-  //       doc.text(textLines, 40, y);
-
-  //       y += textLines.length * 14 + 15;
-
-  //       // Page break
-  //       if (y > 760) {
-  //         doc.addPage();
-  //         y = 40;
-  //       }
-  //     });
-  //   });
-
-  //   /* ================= SAVE ================= */
-  //   doc.save("consultancy-report.pdf");
-  // };
-
-//  const generateConsultancyReport = () => {
-//    const doc = new jsPDF({ unit: "pt", format: "a4" });
-//    const W = 595;
-//    const MARGIN = 30;
-//    const CONTENT_W = W - MARGIN * 2;
-
-//    doc.setFillColor(10, 61, 82);
-//    doc.rect(0, 0, W, 72, "F");
-
-//    doc.setFillColor(200, 168, 75);
-//    doc.rect(0, 72, W, 3, "F");
-
-//    doc.setFont("helvetica", "bold");
-//    doc.setFontSize(20);
-//    doc.setTextColor(255, 255, 255);
-//    doc.text("NeuroCheck Pro", MARGIN, 32);
-
-//    doc.setFont("helvetica", "normal");
-//    doc.setFontSize(9);
-//    doc.setTextColor(168, 208, 222);
-
-//    doc.setFontSize(9);
-//    doc.setTextColor(194, 221, 230);
-
-//    doc.setFillColor(240, 246, 249);
-//    doc.rect(0, 75, W, 38, "F");
-//    doc.setDrawColor(208, 228, 236);
-//    doc.setLineWidth(0.5);
-//    doc.line(0, 113, W, 113);
-
-//    const patientDate = new Date().toLocaleDateString("en-GB", {
-//      day: "2-digit",
-//      month: "short",
-//      year: "numeric",
-//    });
-
-//    // Assessment removed from header
-//    const fields = [
-//      ["PATIENT NAME", data.patient.name],
-//      ["AGE", `${getAge(data.patient.dateOfBirth)} yrs`],
-//      ["DATE", patientDate],
-//    ];
-
-//    fields.forEach(([label, value], i) => {
-//      const x = MARGIN + i * 130;
-//      doc.setFont("helvetica", "normal");
-//      doc.setFontSize(7.5);
-//      doc.setTextColor(90, 122, 138);
-//      doc.text(label, x, 88);
-//      doc.setFont("helvetica", "bold");
-//      doc.setFontSize(10);
-//      doc.setTextColor(10, 61, 82);
-//      doc.text(value || "—", x, 102);
-//    });
-
-//    const LEFT_W = 160;
-//    const BODY_Y = 120;
-
-//    doc.setDrawColor(208, 228, 236);
-//    doc.setLineWidth(0.5);
-//    doc.line(MARGIN + LEFT_W, BODY_Y, MARGIN + LEFT_W, 760);
-
-//    const sectionLabel = (text, y) => {
-//      doc.setFont("helvetica", "bold");
-//      doc.setFontSize(7.5);
-//      doc.setTextColor(90, 122, 138);
-//      doc.text(text.toUpperCase(), MARGIN, y);
-//      doc.setDrawColor(224, 238, 244);
-//      doc.line(MARGIN, y + 3, MARGIN + LEFT_W - 8, y + 3);
-//    };
-
-//    const smallText = (text, x, y, maxW) => {
-//      doc.setFont("helvetica", "normal");
-//      doc.setFontSize(9);
-//      doc.setTextColor(51, 51, 51);
-//      const lines = doc.splitTextToSize(text, maxW);
-//      doc.text(lines, x, y);
-//      return lines.length * 12;
-//    };
-
-//    let ly = BODY_Y + 14;
-
-//    // Assessment name moved to left column
-//    sectionLabel("Assessment", ly);
-//    ly += 10;
-//    ly += smallText(data.assessment.name || "—", MARGIN, ly, LEFT_W - 8);
-//    ly += 10;
-
-//    sectionLabel("Diagnosis", ly);
-//    ly += 10;
-
-//    doc.setFont("helvetica", "bold");
-//    doc.setFontSize(8.5);
-//    doc.setTextColor(90, 122, 138);
-//    doc.text("Primary", MARGIN, ly);
-//    ly += 10;
-//    ly += smallText(
-//      patientAppointment?.diagnosis || "Pending",
-//      MARGIN,
-//      ly,
-//      LEFT_W - 8,
-//    );
-//    ly += 6;
-
-//    doc.setFont("helvetica", "bold");
-//    doc.setFontSize(8.5);
-//    doc.setTextColor(90, 122, 138);
-//    doc.text("Score", MARGIN, ly);
-//    ly += 10;
-//    doc.setFont("helvetica", "bold");
-//    doc.setFontSize(10);
-//    doc.setTextColor(10, 61, 82);
-//    doc.text(String(submission[0]?.score ?? "—"), MARGIN, ly);
-//    ly += 16;
-
-//    doc.setFont("helvetica", "bold");
-//    doc.setFontSize(8.5);
-//    doc.setTextColor(90, 122, 138);
-//    doc.text("Demographics", MARGIN, ly);
-//    ly += 10;
-//    ly += smallText(data.patient.demographics || "—", MARGIN, ly, LEFT_W - 8);
-//    ly += 12;
-
-//    sectionLabel("Review Notes", ly);
-//    ly += 10;
-//    ly += smallText(
-//      patientAppointment?.notes_from_review || "—",
-//      MARGIN,
-//      ly,
-//      LEFT_W - 8,
-//    );
-
-//    // ── Rx SYMBOL ──
-//    const RX = MARGIN + LEFT_W + 12;
-//  doc.setFont("helvetica", "bold");
-//  doc.setFontSize(20);
-//  doc.setTextColor(10, 61, 82);
-//  doc.text("Rx", RX, BODY_Y + 28);
-
-//    // ── SUMMARIES HIDDEN ──
-
-//    // ── POST-CONSULT NOTES + FEEDBACK BOX ──
-//    let ry = BODY_Y + 46;
-//    const RX_W = CONTENT_W - LEFT_W - 16;
-
-//    const postConsultText = patientAppointment?.feedback
-//      ? `${patientAppointment.feedback}`
-//      : null;
-
-//    const feedbackText = patientAppointment?.feedback || null;
-
-//    if (postConsultText || feedbackText) {
-//      ry += 4;
-//      const RX_W = CONTENT_W - LEFT_W - 16;
-
-//      // combine both into one box
-//      const combinedLines = [];
-
-//      if (patientAppointment?.feedback) {
-//        combinedLines.push(
-//          ...doc.splitTextToSize("Post-Consultation Notes", RX_W - 16),
-//        );
-//      }
-
-//      // Build the box content
-//      const noteLines = patientAppointment?.feedback
-//        ? doc.splitTextToSize(patientAppointment.feedback, RX_W - 16)
-//        : [];
-
-//      const feedbackLines = patientAppointment?.feedback
-//        ? doc.splitTextToSize(patientAppointment.feedback, RX_W - 16)
-//        : [];
-
-//      // POST-CONSULT NOTES box
-//      if (patientAppointment?.feedback) {
-//        const noteContent = doc.splitTextToSize(
-//          patientAppointment.feedback,
-//          RX_W - 16,
-//        );
-//        const boxH = noteContent.length * 11 + 24;
-
-//        doc.setFillColor(248, 251, 253);
-//        doc.setDrawColor(208, 228, 236);
-//        doc.setLineWidth(0.5);
-//        doc.roundedRect(RX, ry, RX_W, boxH, 3, 3, "FD");
-
-//        doc.setFont("helvetica", "bold");
-//        doc.setFontSize(7.5);
-//        doc.setTextColor(90, 122, 138);
-//        doc.text("POST-CONSULTATION NOTES", RX + 10, ry + 12);
-
-//        doc.setFont("helvetica", "normal");
-//        doc.setFontSize(9);
-//        doc.setTextColor(51, 51, 51);
-//        doc.text(noteContent, RX + 10, ry + 24);
-
-//        ry += boxH + 10;
-//      }
-
-//      // FEEDBACK box
-//      if (patientAppointment?.feedback) {
-//        const fbContent = doc.splitTextToSize(
-//          patientAppointment.feedback,
-//          RX_W - 16,
-//        );
-//        const fbBoxH = fbContent.length * 11 + 24;
-
-//        doc.setFillColor(240, 249, 244);
-//        doc.setDrawColor(180, 220, 200);
-//        doc.setLineWidth(0.5);
-//        doc.roundedRect(RX, ry, RX_W, fbBoxH, 3, 3, "FD");
-
-//        doc.setFont("helvetica", "bold");
-//        doc.setFontSize(7.5);
-//        doc.setTextColor(60, 140, 100);
-//        doc.text("CLINICIAN FEEDBACK", RX + 10, ry + 12);
-
-//        doc.setFont("helvetica", "normal");
-//        doc.setFontSize(9);
-//        doc.setTextColor(51, 51, 51);
-//        doc.text(fbContent, RX + 10, ry + 24);
-
-//        ry += fbBoxH + 12;
-//      }
-//    }
-
-//    // ── FOOTER ──
-//    const FOOTER_Y = 790;
-//    doc.setFillColor(250, 252, 253);
-//    doc.rect(0, FOOTER_Y - 10, W, 52, "F");
-//    doc.setDrawColor(208, 228, 236);
-//    doc.setLineWidth(0.5);
-//    doc.line(0, FOOTER_Y - 10, W, FOOTER_Y - 10);
-
-//    doc.setFont("helvetica", "normal");
-//    doc.setFontSize(8);
-//    doc.setTextColor(153, 153, 153);
-//    const validity = doc.splitTextToSize(
-//      "This prescription is valid for 30 days from date of issue. Dispensed by licensed pharmacy only.",
-//      190,
-//    );
-//    doc.text(validity, MARGIN, FOOTER_Y + 4);
-
-//    doc.setDrawColor(10, 61, 82);
-//    doc.setLineWidth(0.5);
-//    doc.line(W - MARGIN - 130, FOOTER_Y + 2, W - MARGIN, FOOTER_Y + 2);
-
-//    doc.setFont("helvetica", "normal");
-//    doc.setFontSize(8);
-//    doc.setTextColor(90, 122, 138);
-//    const clinicianLines = [`Dr. ${userData?.name || "Clinician"}`];
-//    clinicianLines.forEach((line, i) => {
-//      const tw = doc.getTextWidth(line);
-//      doc.text(line, W - MARGIN - tw, FOOTER_Y + 14 + i * 11);
-//    });
-
-//    doc.save(
-//      `prescription-${data.patient.name.replace(/\s+/g, "-").toLowerCase()}.pdf`,
-//    );
-  //  };
+const hasFeedback =
+  Array.isArray(patientAppointment?.feedback?.sections) &&
+    patientAppointment.feedback.sections.length > 0;
   
+  /* ---------------- REPORT DATA SHAPE ---------------- */
+  const reportData = {
+    patientName: data.patient.name,
+    age: getAge(data.patient.dateOfBirth),
+    demographics: data.patient.demographics,
+    clinicianDiagnosis: patientAppointment?.diagnosis || "",
+    reviewNotes: patientAppointment?.notes_from_review || "",
+    postConsultNotes:
+      patientAppointment?.feedback?.sections
+        ?.map((s) => `${s.heading}: ${s.content}`)
+        .join("\n") || "",
+  };
+
   const handleDownloadReport = () => {
-    generateConsultancyReport({
-      data,
-      submission,
-      patientAppointment,
-      userData,
-      rawSubmissions,
-    });
+    reportRef.current?.downloadPDF();
   };
 
   /* ---------------- FEEDBACK SUBMIT ---------------- */
@@ -487,23 +158,22 @@ const [showReportForm, setShowReportForm] = useState(false);
     fetchAppointments();
   };
 
-  // const handleReportFormSubmit = async (formattedNotes) => {
-  //   // Shape: { sections: [{ heading: string, content: string }] }
-  //   setNotes(formattedNotes); 
-  //   await handleSubmitFeedback({ preventDefault: () => {} });
-  //   setShowReportForm(false);
-  // };
-  
   const handleReportFormSubmit = async (formattedNotes) => {
     if (!selectedAppointment) return;
 
-    
-    await updateSchedule(selectedAppointment.id, { feedback: formattedNotes });
+    const payload = {
+      feedback: {
+        sections: formattedNotes.sections,
+      },
+    };
+
+    await updateSchedule(selectedAppointment.id, payload);
+
     setShowReportForm(false);
     fetchAppointments();
   };
-  
- if (showReportForm) {
+
+  if (showReportForm) {
     return (
       <PostConsultancyFeedbackForm
         onSubmit={handleReportFormSubmit}
@@ -522,6 +192,13 @@ const [showReportForm, setShowReportForm] = useState(false);
       <Header
         title="Assessment Submission Details"
         description="Review assessment submission details and complete consultancy report "
+      />
+
+      <AssessmentReport
+        ref={reportRef}
+        mode="hidden"
+        data={reportData}
+        submission={submission}
       />
 
       {/* PROFILE */}
@@ -582,17 +259,49 @@ const [showReportForm, setShowReportForm] = useState(false);
           ))}
 
         {activeTab === "Consultancy Report" && (
-          <ReportStructure
-            data={{
-              patientName: data.patient.name,
-              age: getAge(data.patient.dateOfBirth),
-              demographics: data.patient.demographics,
-              clinicianDiagnosis: patientAppointment?.diagnosis || "",
-              reviewNotes: patientAppointment?.notes_from_review || "",
-              postConsultNotes: patientAppointment?.feedback || "",
-            }}
-            submission={submission}
-          />
+          <>
+            <ReportStructure
+              ref={reportRef}
+              data={{
+                patientName: data.patient.name,
+                age: getAge(data.patient.dateOfBirth),
+                demographics: data.patient.demographics,
+                clinicianDiagnosis: patientAppointment?.diagnosis || "",
+                reviewNotes: patientAppointment?.notes_from_review || "",
+                postConsultNotes: patientAppointment?.feedback || "",
+              }}
+              submission={submission}
+            />
+            <div>
+              <div className="mt-16">
+                <h2 className="text-lg font-semibold text-[#114654] mb-1">
+                  Consultancy Report Ready
+                </h2>
+                <p className="text-sm text-gray-500">
+                  Preview the full report or download it as a PDF using the
+                  button below.
+                </p>
+              </div>
+              <button
+                onClick={() => setPreviewModal(true)}
+                className="border border-[#114654] cursor-pointer text-[#114654] px-6 py-2 text-sm rounded-full hover:bg-[#f0f7fa] transition-colors"
+              >
+                👁 Preview Report
+              </button>
+            </div>
+            {/* <AssessmentReport
+              ref={reportRef}
+              data={{
+                patientName: data.patient.name,
+                age: getAge(data.patient.dateOfBirth),
+                demographics: data.patient.demographics,
+                clinicianDiagnosis: patientAppointment?.diagnosis || "",
+                reviewNotes: patientAppointment?.notes_from_review || "",
+                postConsultNotes: patientAppointment?.feedback || "",
+              }}
+              submission={submission}
+            /> */}
+          </>
         )}
 
         {/* FOOTER ACTIONS */}
@@ -618,34 +327,34 @@ const [showReportForm, setShowReportForm] = useState(false);
           {isLast && (
             <>
               {/* {isReportGenerated && ( */}
-                <button
-                  onClick={handleDownloadReport}
-                  className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
-                >
-                  Download Report
-                </button>
+              <button
+                onClick={handleDownloadReport}
+                className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
+              >
+                Download Report
+              </button>
               {/* )} */}
 
               {/* {isReportGenerated && !hasFeedback && ( */}
-                {/* <button
-                  onClick={() => {
-                    setSelectedAppointment(patientAppointment);
-                    setFeedbackModal(true);
-                  }}
-                  className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
-                >
-                  Add Feedback
-                </button> */}
+              {/* <button
+                onClick={() => {
+                  setSelectedAppointment(patientAppointment);
+                  setFeedbackModal(true);
+                }}
+                className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
+              >
+                Add Feedback
+              </button> */}
               {/* )} */}
-               <button
-     onClick={() => {
-       setSelectedAppointment(patientAppointment);
-       setShowReportForm(true);
-     }}
-     className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
-   >
-     Clinician Notes Post Consultation
-   </button>
+              <button
+                onClick={() => {
+                  setSelectedAppointment(patientAppointment);
+                  setShowReportForm(true);
+                }}
+                className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
+              >
+                Clinician Notes Post Consultation
+              </button>
 
               {!hasAppointmentForPatient && (
                 <button
@@ -658,6 +367,23 @@ const [showReportForm, setShowReportForm] = useState(false);
             </>
           )}
         </div>
+
+        {/* ── PREVIEW MODAL ── */}
+        <Modal
+          classname="w-[95vw] max-w-[860px]"
+          isOpen={previewModal}
+          closeModal={() => setPreviewModal(false)}
+          title="Consultancy Report Preview"
+        >
+          {/* Scrollable container so the wide report doesn't break layout */}
+          <div className="overflow-x-auto overflow-y-auto max-h-[80vh] py-2">
+            <AssessmentReport
+              mode="preview"
+              data={reportData}
+              submission={submission}
+            />
+          </div>
+        </Modal>
 
         {/* FEEDBACK MODAL */}
         <Modal
@@ -689,7 +415,7 @@ const [showReportForm, setShowReportForm] = useState(false);
       </div>
     </div>
   );
-};;
+};
 
 export default AssessmentDetails;
 

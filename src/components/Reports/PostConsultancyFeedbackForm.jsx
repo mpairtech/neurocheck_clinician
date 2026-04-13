@@ -48,11 +48,12 @@ const QUILL_FORMATS = [
 
 /* ───────────────────────────────────────────── */
 const buildNotesPayload = (values) => {
-  const sections = SECTIONS.map(({ key, label }) => ({
-    heading: label,
-    content: values[key] || "",
-  }));
-  return JSON.stringify({ sections }, null, 2);
+  return {
+    sections: SECTIONS.map(({ key, label }) => ({
+      heading: label,
+      content: values[key] || "",
+    })),
+  };
 };
 
 /* ───────────── Reusable Editor ───────────── */

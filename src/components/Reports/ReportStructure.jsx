@@ -101,22 +101,26 @@
 // export default ReportStructure;
 
 import { useState } from "react";
-import Modal from "./ui-reusable/Modal";
+import Modal from "../ui-reusable/Modal";
 
 const ReportStructure = ({ data = {}, submission = [] }) => {
   const [showFullReport, setShowFullReport] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   // Parse clinician post consultation notes
-  let parsedSections = [];
+  // let parsedSections = [];
 
-  try {
-    const parsed = JSON.parse(data?.postConsultNotes || "{}");
-    parsedSections = parsed?.sections || [];
-  } catch (e) {
-    parsedSections = [];
-  }
+  // try {
+  //   const parsed = JSON.parse(data?.postConsultNotes || "{}");
+  //   parsedSections = parsed?.sections || [];
+  // } catch (e) {
+  //   parsedSections = [];
+  // }
+  const parsedSections = data?.postConsultNotes?.sections || [];
 
   const cleanText = (html) => html?.replace(/<[^>]*>/g, "") || "";
+
+  console.log(data)
 
   return (
     <div className="w-full text-gray-900 font-sans">
@@ -165,20 +169,40 @@ const ReportStructure = ({ data = {}, submission = [] }) => {
 
             <td className="border p-3">
               {parsedSections.length > 0 ? (
-                <div className="space-y-1">
-                  {parsedSections.slice(0, 2).map((s, i) => (
-                    <p key={i} className="text-xs text-gray-600 truncate">
-                      <span className="font-medium">{s.heading}:</span>{" "}
-                      {cleanText(s.content).slice(0, 40)}...
-                    </p>
-                  ))}
+                <div>
+                  {/* HEADER (always visible) */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">
+                      {parsedSections.length} sections added
+                    </span>
 
-                  <button
-                    onClick={() => setShowFullReport(true)}
-                    className="text-blue-600 text-xs underline mt-1"
-                  >
-                    View full report
-                  </button>
+                    <button
+                      onClick={() => setExpanded(!expanded)}
+                      className="text-blue-600 text-xs underline"
+                    >
+                      {expanded ? "Collapse" : "View full"}
+                    </button>
+                  </div>
+
+                  {/* EXPAND AREA */}
+                  {expanded && (
+                    <div className="mt-3 max-h-40 overflow-y-auto border rounded p-2 bg-gray-50 space-y-3">
+                      {parsedSections.map((section, index) => (
+                        <div key={index}>
+                          <p className="font-semibold text-xs">
+                            {section.heading}
+                          </p>
+
+                          <div
+                            className="text-xs text-gray-700 prose prose-sm max-w-none"
+                            dangerouslySetInnerHTML={{
+                              __html: section.content,
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 "-"
@@ -200,29 +224,6 @@ const ReportStructure = ({ data = {}, submission = [] }) => {
           ))}
         </div>
       ))}
-
-      {/* ================= MODAL ================= */}
-      <Modal
-        classname="w-[80vw] max-h-[80vh] overflow-y-auto"
-        isOpen={showFullReport}
-        closeModal={() => setShowFullReport(false)}
-        title="Clinician Notes - Full Report"
-      >
-        <div className="space-y-5">
-          {parsedSections.map((section, index) => (
-            <div key={index} className="border-b pb-3">
-              <h3 className="font-semibold text-sm mb-1">{section.heading}</h3>
-
-              <div
-                className="text-sm text-gray-700 leading-relaxed"
-                dangerouslySetInnerHTML={{
-                  __html: section.content,
-                }}
-              />
-            </div>
-          ))}
-        </div>
-      </Modal>
     </div>
   );
 };
