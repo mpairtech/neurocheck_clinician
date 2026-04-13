@@ -11,6 +11,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Modal from "../../components/ui-reusable/Modal";
 import { generateConsultancyReport } from "../../components/utils/GenerateReport";
+import PostConsultancyFeedbackForm from "../../components/Reports/PostConsultancyFeedbackForm";
 
 
 const tabs = ["AI Summary", "View Assessment details", "Consultancy Report"];
@@ -29,7 +30,7 @@ const AssessmentDetails = () => {
 
   const [rawSubmissions, setRawSubmissions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+const [showReportForm, setShowReportForm] = useState(false);  
 
   /* ---------------- FETCH APPOINTMENTS ---------------- */
   const fetchAppointments = async () => {
@@ -82,15 +83,18 @@ const AssessmentDetails = () => {
   }, [patientId, assessmentId]);
 
   const data = submission[0];
-  if (!data) return (
-    <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+  if (!data)
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
 
-        <p className="text-sm text-gray-500">Loading assessment details...</p>
+          <p className="text-sm text-gray-500">Loading assessment details...</p>
+        </div>
       </div>
-    </div>
-  );
+    );
+
+ 
 
   /* ---------------- TAB UTILS ---------------- */
   const index = tabs.indexOf(activeTab);
@@ -483,6 +487,30 @@ const AssessmentDetails = () => {
     fetchAppointments();
   };
 
+  // const handleReportFormSubmit = async (formattedNotes) => {
+  //   // Shape: { sections: [{ heading: string, content: string }] }
+  //   setNotes(formattedNotes); 
+  //   await handleSubmitFeedback({ preventDefault: () => {} });
+  //   setShowReportForm(false);
+  // };
+  
+  const handleReportFormSubmit = async (formattedNotes) => {
+    if (!selectedAppointment) return;
+
+    
+    await updateSchedule(selectedAppointment.id, { feedback: formattedNotes });
+    setShowReportForm(false);
+    fetchAppointments();
+  };
+  
+ if (showReportForm) {
+    return (
+      <PostConsultancyFeedbackForm
+        onSubmit={handleReportFormSubmit}
+        onCancel={() => setShowReportForm(false)}
+      />
+    );
+  }
   /* ---------------- NAVIGATION ---------------- */
   const handleMakeDiagnosis = () => {
     navigate(`/prescription/${patientId}`);
@@ -599,7 +627,7 @@ const AssessmentDetails = () => {
               {/* )} */}
 
               {/* {isReportGenerated && !hasFeedback && ( */}
-                <button
+                {/* <button
                   onClick={() => {
                     setSelectedAppointment(patientAppointment);
                     setFeedbackModal(true);
@@ -607,8 +635,17 @@ const AssessmentDetails = () => {
                   className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
                 >
                   Add Feedback
-                </button>
+                </button> */}
               {/* )} */}
+               <button
+     onClick={() => {
+       setSelectedAppointment(patientAppointment);
+       setShowReportForm(true);
+     }}
+     className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
+   >
+     Clinician Notes Post Consultation
+   </button>
 
               {!hasAppointmentForPatient && (
                 <button
@@ -652,7 +689,7 @@ const AssessmentDetails = () => {
       </div>
     </div>
   );
-};
+};;
 
 export default AssessmentDetails;
 
