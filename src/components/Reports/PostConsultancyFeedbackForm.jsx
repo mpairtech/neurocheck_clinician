@@ -90,6 +90,8 @@ const PostConsultancyFeedbackForm = ({ onSubmit, onCancel }) => {
   const [submitting, setSubmitting] = useState(false);
   const sectionRefs = useRef({});
 
+  const [error, setError] = useState("");
+
   const handleChange = (key, html) => {
     setValues((prev) => ({ ...prev, [key]: html }));
   };
@@ -104,10 +106,21 @@ const PostConsultancyFeedbackForm = ({ onSubmit, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const allFilled = SECTIONS.every(({ key }) => hasContent(key));
+
+    if (!allFilled) {
+      setError("Please fill all sections before submitting.");
+      return;
+    }
+    setError("");
     setSubmitting(true);
-    const payload = buildNotesPayload(values);
-    await onSubmit(payload);
-    setSubmitting(false);
+
+    try {
+      const payload = buildNotesPayload(values);
+      await onSubmit(payload);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const hasContent = (key) => {
@@ -117,23 +130,20 @@ const PostConsultancyFeedbackForm = ({ onSubmit, onCancel }) => {
 
   const filledCount = SECTIONS.filter(({ key }) => hasContent(key)).length;
 
+  const allFilled = SECTIONS.every(({ key }) => hasContent(key));
   return (
     <div className="min-h-screen bg-white font-sans ">
       {/* Top bar */}
       <div className="sticky top-0 z-30 flex items-center justify-between px-6 py-6 bg-slate-100 shadow-sm ">
         <div className="flex items-center gap-3">
           {onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="  text-xs"
-            >
+            <button type="button" onClick={onCancel} className="  text-xs">
               ← Back
             </button>
           )}
-          <span className="text-teal-800 font-semibold">
+          <p className="text-teal-800 font-semibold text-xl">
             Consultancy Report Form
-          </span>
+          </p>
         </div>
 
         <span className="text-white/60 text-xs">
@@ -199,8 +209,8 @@ const PostConsultancyFeedbackForm = ({ onSubmit, onCancel }) => {
             <button
               type="submit"
               form="report-form"
-              disabled={submitting}
-              className="bg-[#114654] text-white px-6 py-1.5 rounded"
+              disabled={submitting || !allFilled}
+              className="bg-[#114654] text-white px-6 py-1.5 rounded disabled:opacity-50"
             >
               {submitting ? "Saving..." : "Save Report"}
             </button>
