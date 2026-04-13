@@ -14,6 +14,7 @@ import SignUpForm from "../components/SignUp/SignUpForm";
 import Guidelines from "../components/Guidelines";
 import ForgetPassword from "../pages/ForgetPass/ForgetPassword";
 import ChangePassword from "../components/Authentication/ChangePassword";
+import NeuroCheckReport from "../pages/Assessments/AssessmentReport";
 
 export const router = createBrowserRouter([
   {
@@ -48,6 +49,10 @@ export const router = createBrowserRouter([
       {
         path: "/assessments",
         element: <AssessmentList />,
+      },
+      {
+        path: "/assessment-report",
+        element: <NeuroCheckReport />,
       },
       {
         path: "/assessment/:patientId/:assessmentId",
