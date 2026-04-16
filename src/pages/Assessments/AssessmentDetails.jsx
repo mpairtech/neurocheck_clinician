@@ -62,6 +62,7 @@ const AssessmentDetails = () => {
         if (!acc[key]) {
           acc[key] = {
             patient: item.patient,
+            clinician: item.clinician,
             assessment: item.assessment,
             assessmentId: item.assessmentId,
             status: item.status,
@@ -117,16 +118,18 @@ const AssessmentDetails = () => {
   const isReportGenerated =
     patientAppointment?.status?.toString().trim().toLowerCase() === "completed";
 
-const hasFeedback =
-  Array.isArray(patientAppointment?.feedback?.sections) &&
+  const hasFeedback =
+    Array.isArray(patientAppointment?.feedback?.sections) &&
     patientAppointment.feedback.sections.length > 0;
-  
+
   /* ---------------- REPORT DATA SHAPE ---------------- */
   const reportData = {
     patientName: data.patient.name,
     age: getAge(data.patient.dateOfBirth),
     demographics: data.patient.demographics,
-    clinicianDiagnosis: patientAppointment?.diagnosis || "",
+    clinician: data.clinician.name || "",
+    assessmentName: data.assessment.name || "",
+    regNo: data.clinician.regNo,
     reviewNotes: patientAppointment?.notes_from_review || "",
     postConsultNotes:
       patientAppointment?.feedback?.sections
@@ -222,11 +225,10 @@ const hasFeedback =
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-3 ${
-                activeTab === tab
+              className={`pb-3 ${activeTab === tab
                   ? "border-b-2 cursor-pointer border-[#114654] text-[#114654]"
                   : "text-gray-500 cursor-pointer"
-              }`}
+                }`}
             >
               {tab}
             </button>
@@ -263,10 +265,11 @@ const hasFeedback =
             <ReportStructure
               ref={reportRef}
               data={{
+                assessmentName: data.assessment.name || "",
                 patientName: data.patient.name,
                 age: getAge(data.patient.dateOfBirth),
                 demographics: data.patient.demographics,
-                clinicianDiagnosis: patientAppointment?.diagnosis || "",
+                clinician: data.clinician.name || "",
                 reviewNotes: patientAppointment?.notes_from_review || "",
                 postConsultNotes: patientAppointment?.feedback || "",
               }}
@@ -284,7 +287,7 @@ const hasFeedback =
               </div>
               <button
                 onClick={() => setPreviewModal(true)}
-                className="border border-[#114654] cursor-pointer text-[#114654] px-6 py-2 text-sm rounded-full hover:bg-[#f0f7fa] transition-colors"
+                className="border border-[#114654] cursor-pointer text-[#114654] px-6 py-2 text-sm rounded-full hover:bg-[#f0f7fa] transition-colors mt-3"
               >
                 👁 Preview Report
               </button>

@@ -151,7 +151,7 @@ const ReportStructure = ({ data = {}, submission = [] }) => {
             <td className="border p-3 font-medium bg-gray-50">
               Clinician Diagnosis
             </td>
-            <td className="border p-3">{data?.clinicianDiagnosis || "-"}</td>
+            <td className="border p-3">{data?.clinician || "-"}</td>
           </tr>
 
           <tr>

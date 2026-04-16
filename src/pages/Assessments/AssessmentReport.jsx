@@ -766,10 +766,10 @@ function splitIntoPages(blocks) {
 function CoverPage({ data, today }) {
   const rows = [
     ["Name", data.patientName || "—"],
-    ["Date of Birth", data.dateOfBirth || "—"],
+    ["Age", data.age || "—"],
     ["Assessment Date", today],
-    ["Clinician", data.clinicianName || "—"],
-    ["Registration", data.clinicianRegistration || "—"],
+    ["Clinician", data.clinician || "—"],
+    ["Registration", data.regNo || "—"],
   ];
   return (
     <div style={S.page}>
@@ -805,7 +805,7 @@ function CoverPage({ data, today }) {
               fontSize: "15px",
             }}
           >
-            {data.assessmentName || "Adult AuDHD Diagnostic Journey (Nurse)"}
+            {data.assessmentName  || "-"}
           </p>
           <div style={S.divider} />
         </div>
