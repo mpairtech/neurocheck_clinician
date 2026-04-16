@@ -135,6 +135,8 @@ const AssessmentDetails = () => {
       patientAppointment?.feedback?.sections
         ?.map((s) => `${s.heading}: ${s.content}`)
         .join("\n") || "",
+    feedbackSections: patientAppointment?.feedback?.sections || [],
+    clinicianDiagnosis: patientAppointment?.diagnosis || "",
   };
 
   const handleDownloadReport = () => {
@@ -226,8 +228,8 @@ const AssessmentDetails = () => {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`pb-3 ${activeTab === tab
-                  ? "border-b-2 cursor-pointer border-[#114654] text-[#114654]"
-                  : "text-gray-500 cursor-pointer"
+                ? "border-b-2 cursor-pointer border-[#114654] text-[#114654]"
+                : "text-gray-500 cursor-pointer"
                 }`}
             >
               {tab}
