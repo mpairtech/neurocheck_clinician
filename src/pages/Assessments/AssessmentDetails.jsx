@@ -375,13 +375,13 @@ const AssessmentDetails = () => {
 
         {/* ── PREVIEW MODAL ── */}
         <Modal
-          classname="w-[95vw] max-w-[860px]"
+          classname=""
           isOpen={previewModal}
           closeModal={() => setPreviewModal(false)}
           title="Consultancy Report Preview"
         >
           {/* Scrollable container so the wide report doesn't break layout */}
-          <div className="overflow-x-auto overflow-y-auto max-h-[80vh] py-2">
+          <div className="py-2">
             <AssessmentReport
               mode="preview"
               data={reportData}

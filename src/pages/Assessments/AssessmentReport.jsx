@@ -251,7 +251,7 @@ function makeBlocks(data, submission, today, feedbackSections = []) {
     const blocks = [];
     const add = (el, h) => blocks.push({ el, h });
 
-    let sectionNum = 1; // ← running counter
+    let sectionNum = 1;
 
     // ── Dynamic clinician sections ──────────────────────────────────────────
     feedbackSections.forEach((section) => {
@@ -265,12 +265,14 @@ function makeBlocks(data, submission, today, feedbackSections = []) {
 
         add(
             <div key={`section-${sectionNum}`}>
-                <Section num={sectionNum} title={section.heading || `Section ${sectionNum}`} />
+                <div>
+                    <Section num={sectionNum} title={section.heading || `Section ${sectionNum}`} />
+                </div>
                 <div>{renderDynamicContent(plainText)}</div>
             </div>,
             totalH,
         );
-        sectionNum++; // ← increment after each clinician section
+        sectionNum++;
     });
 
     // ── AI submission summaries ─────────────────────────────────────────────
@@ -466,7 +468,6 @@ const AssessmentReport = forwardRef(function AssessmentReport(
 ) {
     const reportRef = useRef(null);
     const [downloading, setDownloading] = useState(false);
-    const [currentPage, setCurrentPage] = useState(0);
 
     const today = new Date().toLocaleDateString("en-GB", {
         day: "2-digit",
@@ -577,110 +578,33 @@ const AssessmentReport = forwardRef(function AssessmentReport(
         );
     }
 
-    // ── "preview" or "full" mode: show navigator + page view ─────────────────
+    // ── "preview" or "full" mode: show scrollable pages ─────────────────
     return (
         <div>
-            {/* ── PAGE NAVIGATOR ── */}
+            {/* ── SCROLLABLE PAGES ── */}
             <div
                 style={{
+                    overflowY: "auto",
+                    maxHeight: "80vh",
+                    padding: "16px 0",
                     display: "flex",
-                    justifyContent: "center",
+                    flexDirection: "column",
                     alignItems: "center",
-                    gap: "12px",
-                    marginBottom: "20px",
-                    flexWrap: "wrap",
+                    gap: "24px",
                 }}
             >
-                <button
-                    onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
-                    disabled={currentPage === 0}
-                    style={{
-                        padding: "7px 18px",
-                        background: currentPage === 0 ? "#ccc" : T.dark,
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: currentPage === 0 ? "default" : "pointer",
-                        fontFamily: "'Arial', sans-serif",
-                        fontSize: "12px",
-                    }}
-                >
-                    ← Prev
-                </button>
-
-                <div
-                    style={{
-                        display: "flex",
-                        gap: "6px",
-                        flexWrap: "wrap",
-                        justifyContent: "center",
-                    }}
-                >
-                    {allPages.map((_, i) => (
-                        <button
-                            key={i}
-                            onClick={() => setCurrentPage(i)}
-                            style={{
-                                width: "30px",
-                                height: "30px",
-                                borderRadius: "50%",
-                                background: currentPage === i ? T.dark : "#fff",
-                                color: currentPage === i ? "#fff" : T.dark,
-                                border: `1.5px solid ${T.dark}`,
-                                cursor: "pointer",
-                                fontSize: "11px",
-                                fontFamily: "'Arial', sans-serif",
-                                fontWeight: currentPage === i ? "bold" : "normal",
-                            }}
-                        >
-                            {i + 1}
-                        </button>
-                    ))}
-                </div>
-
-                <button
-                    onClick={() =>
-                        setCurrentPage((p) => Math.min(allPages.length - 1, p + 1))
-                    }
-                    disabled={currentPage === allPages.length - 1}
-                    style={{
-                        padding: "7px 18px",
-                        background: currentPage === allPages.length - 1 ? "#ccc" : T.dark,
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: currentPage === allPages.length - 1 ? "default" : "pointer",
-                        fontFamily: "'Arial', sans-serif",
-                        fontSize: "12px",
-                    }}
-                >
-                    Next →
-                </button>
+                {allPages.map((page, i) => (
+                    <div
+                        key={i}
+                        style={{
+                            boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
+                            flexShrink: 0,
+                        }}
+                    >
+                        {page}
+                    </div>
+                ))}
             </div>
-
-            {/* ── CURRENT PAGE PREVIEW ── */}
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    marginBottom: "8px",
-                }}
-            >
-                <div style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.15)" }}>
-                    {allPages[currentPage]}
-                </div>
-            </div>
-
-            <p
-                style={{
-                    textAlign: "center",
-                    fontSize: "12px",
-                    color: "#777",
-                    fontFamily: "'Arial', sans-serif",
-                }}
-            >
-                Page {currentPage + 1} of {allPages.length}
-            </p>
 
             {/* ── OWN DOWNLOAD BUTTON — only shown in "full" (standalone) mode ── */}
             {mode === "full" && (
