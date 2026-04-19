@@ -55,7 +55,7 @@ export const router = createBrowserRouter([
         element: <NeuroCheckReport />,
       },
       {
-        path: "/assessment/:patientId/:assessmentId",
+        path: "/assessments/:patientId/:assessmentId",
         element: <AssessmentDetails />,
       },
       {

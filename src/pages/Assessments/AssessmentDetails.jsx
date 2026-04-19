@@ -227,10 +227,11 @@ const AssessmentDetails = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-3 ${activeTab === tab
-                ? "border-b-2 cursor-pointer border-[#114654] text-[#114654]"
-                : "text-gray-500 cursor-pointer"
-                }`}
+              className={`pb-3 ${
+                activeTab === tab
+                  ? "border-b-2 cursor-pointer border-[#114654] text-[#114654]"
+                  : "text-gray-500 cursor-pointer"
+              }`}
             >
               {tab}
             </button>
@@ -283,16 +284,21 @@ const AssessmentDetails = () => {
                   Consultancy Report Ready
                 </h2>
                 <p className="text-sm text-gray-500">
-                  Preview the full report or download it as a PDF using the
-                  button below.
+                  To preview the full report or download it as a PDF,{" "}
+                  <span
+                    onClick={() => setPreviewModal(true)}
+                    className="text-[#18697f] underline cursor-pointer hover:text-[#0d3a45] font-semibold"
+                  >
+                     click here
+                  </span>
                 </p>
               </div>
-              <button
+              {/* <button
                 onClick={() => setPreviewModal(true)}
                 className="border border-[#114654] cursor-pointer text-[#114654] px-6 py-2 text-sm rounded-full hover:bg-[#f0f7fa] transition-colors mt-3"
               >
                 👁 Preview Report
-              </button>
+              </button> */}
             </div>
             {/* <AssessmentReport
               ref={reportRef}
@@ -381,7 +387,7 @@ const AssessmentDetails = () => {
           title="Consultancy Report Preview"
         >
           {/* Scrollable container so the wide report doesn't break layout */}
-          <div className="py-2">
+          <div className="pb-2">
             <AssessmentReport
               mode="preview"
               data={reportData}
