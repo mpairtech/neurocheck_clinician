@@ -4,6 +4,7 @@ import {
     useCallback,
     useImperativeHandle,
     forwardRef,
+    useEffect,
 } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -126,7 +127,7 @@ const S = {
         background: "#1a1a1a",
         marginTop: "6px",
     },
-    infoTable: { width: "100%", borderCollapse: "collapse", marginTop: "32px" },
+    infoTable: { width: "100%", borderCollapse: "collapse", marginTop: "32px", textAlign: "left" },
     infoRow: { borderBottom: "1px solid #e0e0e0" },
     infoLabel: {
         padding: "10px 16px",
@@ -161,10 +162,10 @@ const S = {
         fontSize: "14px",
     },
     divider: {
-        width: "80px",
-        height: "3px",
+        width: "300px",
+        height: "5px",
         background: T.dark,
-        margin: "20px 0",
+        margin: "20px auto",
     },
     confidential: {
         color: "#999",
@@ -183,10 +184,69 @@ const Bullet = ({ children }) => (
     </div>
 );
 
+// Plain section heading — used in the hidden PDF layer
 const Section = ({ num, title }) => (
     <div style={S.sectionRow}>
         <div style={S.badge}>{num}</div>
         <span style={S.sectionTitle}>{title}</span>
+    </div>
+);
+
+// Editable section heading — used in the visible UI layer
+const EditableSection = ({
+    num,
+    title,
+    isEditing,
+    editValue,
+    onStartEdit,
+    onChangeValue,
+    onCommit,
+    onKeyDown,
+}) => (
+    <div style={S.sectionRow}>
+        <div style={S.badge}>{num}</div>
+        {isEditing ? (
+            <input
+                autoFocus
+                value={editValue}
+                onChange={(e) => onChangeValue(e.target.value)}
+                onBlur={onCommit}
+                onKeyDown={onKeyDown}
+                style={{
+                    fontSize: "20px",
+                    fontWeight: "bold",
+                    color: T.dark,
+                    fontFamily: "'Georgia', serif",
+                    border: "none",
+                    borderBottom: `2px solid ${T.mid}`,
+                    outline: "none",
+                    background: "transparent",
+                    width: "100%",
+                    padding: "2px 4px",
+                }}
+            />
+        ) : (
+            <span
+                onClick={onStartEdit}
+                title="Click to edit heading"
+                style={{
+                    ...S.sectionTitle,
+                    cursor: "text",
+                    borderBottom: "1px dashed transparent",
+                    transition: "border-color 0.15s",
+                    padding: "2px 4px",
+                    borderRadius: "2px",
+                }}
+                onMouseEnter={(e) =>
+                    (e.currentTarget.style.borderBottomColor = T.mid)
+                }
+                onMouseLeave={(e) =>
+                    (e.currentTarget.style.borderBottomColor = "transparent")
+                }
+            >
+                {title}
+            </span>
+        )}
     </div>
 );
 
@@ -243,18 +303,32 @@ function renderDynamicContent(text) {
         if (!trimmed) return null;
         if (trimmed.startsWith("• "))
             return <Bullet key={i}>{trimmed.slice(2)}</Bullet>;
-        return <p key={i} style={S.body}>{trimmed}</p>;
+        return (
+            <p key={i} style={S.body}>
+                {trimmed}
+            </p>
+        );
     });
 }
 
-function makeBlocks(data, submission, today, feedbackSections = []) {
+// ─── makeBlocks ───────────────────────────────────────────────────────────────
+// editable=false  → uses plain <Section> (for the hidden PDF layer)
+// editable=true   → uses <EditableSection> with edit callbacks (for visible UI)
+// ─────────────────────────────────────────────────────────────────────────────
+function makeBlocks(
+    data,
+    submission,
+    today,
+    feedbackSections = [],
+    { editable = false, editingIdx = null, editValue = "", onStart, onChange, onCommit, onKeyDown } = {},
+) {
     const blocks = [];
     const add = (el, h) => blocks.push({ el, h });
 
     let sectionNum = 1;
 
     // ── Dynamic clinician sections ──────────────────────────────────────────
-    feedbackSections.forEach((section) => {
+    feedbackSections.forEach((section, idx) => {
         const plainText = quillToText(section.content);
         const lineCount = plainText
             .split("\n")
@@ -263,11 +337,24 @@ function makeBlocks(data, submission, today, feedbackSections = []) {
         const contentH = lineCount * 22;
         const totalH = 58 + Math.max(30, contentH);
 
+        const headingEl = editable ? (
+            <EditableSection
+                num={sectionNum}
+                title={section.heading || `Section ${sectionNum}`}
+                isEditing={editingIdx === idx}
+                editValue={editValue}
+                onStartEdit={() => onStart?.(idx)}
+                onChangeValue={(v) => onChange?.(v)}
+                onCommit={() => onCommit?.()}
+                onKeyDown={onKeyDown}
+            />
+        ) : (
+            <Section num={sectionNum} title={section.heading || `Section ${sectionNum}`} />
+        );
+
         add(
             <div key={`section-${sectionNum}`}>
-                <div>
-                    <Section num={sectionNum} title={section.heading || `Section ${sectionNum}`} />
-                </div>
+                {headingEl}
                 <div>{renderDynamicContent(plainText)}</div>
             </div>,
             totalH,
@@ -279,16 +366,28 @@ function makeBlocks(data, submission, today, feedbackSections = []) {
     if (submission?.length > 0) {
         add(
             <div key={`section-${sectionNum}`}>
-                <Section num={sectionNum} title="Assessment Summary" />
+                {editable ? (
+                    // "Assessment Summary" is auto-generated — not user-editable
+                    <Section num={sectionNum} title="Assessment Summary" />
+                ) : (
+                    <Section num={sectionNum} title="Assessment Summary" />
+                )}
                 {submission.flatMap((item) =>
                     item.summaries?.map((summary, i) => {
-                        const clean = summary.summary
-                            ?.replace(/[*#_`>]+/g, "")
-                            ?.replace(/-{3,}/g, "")
-                            ?.trim() || "";
+                        const clean =
+                            summary.summary
+                                ?.replace(/[*#_`>]+/g, "")
+                                ?.replace(/-{3,}/g, "")
+                                ?.trim() || "";
                         return (
                             <div key={`summary-${i}`}>
-                                <div style={{ ...S.subHeading, marginTop: "20px", color: T.dark }}>
+                                <div
+                                    style={{
+                                        ...S.subHeading,
+                                        marginTop: "20px",
+                                        color: T.dark,
+                                    }}
+                                >
                                     {summary.questionType}
                                 </div>
                                 <p style={S.body}>{clean}</p>
@@ -297,12 +396,18 @@ function makeBlocks(data, submission, today, feedbackSections = []) {
                     }) || []
                 )}
             </div>,
-            submission.flatMap(i => i.summaries || []).reduce((acc, s) => {
-                const clean = s.summary?.replace(/[*#_`>]+/g, "").replace(/-{3,}/g, "").trim() || "";
-                return acc + Math.ceil(clean.length / 92) * 22 + 40;
-            }, 58),
+            submission
+                .flatMap((i) => i.summaries || [])
+                .reduce((acc, s) => {
+                    const clean =
+                        s.summary
+                            ?.replace(/[*#_`>]+/g, "")
+                            .replace(/-{3,}/g, "")
+                            .trim() || "";
+                    return acc + Math.ceil(clean.length / 92) * 22 + 40;
+                }, 58),
         );
-        sectionNum++; // ← increment
+        sectionNum++;
     }
 
     // ── Review notes ────────────────────────────────────────────────────────
@@ -315,7 +420,7 @@ function makeBlocks(data, submission, today, feedbackSections = []) {
             </div>,
             Math.max(80, h),
         );
-        sectionNum++; // ← increment
+        sectionNum++;
     }
 
     // ── Diagnostic Outcome ──────────────────────────────────────────────────
@@ -332,7 +437,9 @@ function makeBlocks(data, submission, today, feedbackSections = []) {
                     The assessment findings are consistent with:
                 </p>
                 {diagnoses.map((d, i) => (
-                    <div key={i} style={S.outcomeBox}>{d}</div>
+                    <div key={i} style={S.outcomeBox}>
+                        {d}
+                    </div>
                 ))}
                 <p style={{ ...S.body, marginTop: "16px" }}>
                     Both conditions are lifelong neurodevelopmental differences that have
@@ -342,16 +449,36 @@ function makeBlocks(data, submission, today, feedbackSections = []) {
             </div>,
             58 + diagnoses.length * 48 + 120,
         );
-        sectionNum++; // ← increment
+        sectionNum++;
     }
 
     // ── End of report ───────────────────────────────────────────────────────
     add(
-        <div style={{ textAlign: "center", marginTop: "60px", paddingTop: "20px", borderTop: "0.5px solid #ddd" }}>
-            <p style={{ fontSize: "13px", color: "#555", fontFamily: "'Arial', sans-serif" }}>
+        <div
+            style={{
+                textAlign: "center",
+                marginTop: "60px",
+                paddingTop: "20px",
+                borderTop: "0.5px solid #ddd",
+            }}
+        >
+            <p
+                style={{
+                    fontSize: "13px",
+                    color: "#555",
+                    fontFamily: "'Arial', sans-serif",
+                }}
+            >
                 End of Report
             </p>
-            <p style={{ fontSize: "11px", color: "#999", fontFamily: "'Arial', sans-serif", marginTop: "4px" }}>
+            <p
+                style={{
+                    fontSize: "11px",
+                    color: "#999",
+                    fontFamily: "'Arial', sans-serif",
+                    marginTop: "4px",
+                }}
+            >
                 NeuroCheck Pro Ltd | Private and Confidential
             </p>
         </div>,
@@ -430,8 +557,8 @@ function CoverPage({ data, today }) {
                             </tr>
                         ))}
                     </tbody>
+                    <p style={S.confidential}>PRIVATE AND CONFIDENTIAL</p>
                 </table>
-                <p style={S.confidential}>PRIVATE AND CONFIDENTIAL</p>
             </div>
         </div>
     );
@@ -456,6 +583,209 @@ function InnerPage({ blocks, pageNum, totalPages, patientName, today }) {
     );
 }
 
+// ─── AddSectionModal ──────────────────────────────────────────────────────────
+// A simple modal/drawer to add a new custom section with heading + content.
+// ─────────────────────────────────────────────────────────────────────────────
+function AddSectionModal({ onAdd, onClose }) {
+    const [heading, setHeading] = useState("");
+    const [content, setContent] = useState("");
+
+    const handleAdd = () => {
+        const trimmedHeading = heading.trim();
+        if (!trimmedHeading) return;
+        onAdd({ heading: trimmedHeading, content: content.trim() });
+        onClose();
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === "Escape") onClose();
+    };
+
+    return (
+        <div
+            style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.35)",
+                zIndex: 1000,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+            }}
+            onClick={(e) => e.target === e.currentTarget && onClose()}
+        >
+            <div
+                style={{
+                    background: "#fff",
+                    borderRadius: "10px",
+                    padding: "32px",
+                    width: "520px",
+                    maxWidth: "90vw",
+                    boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+                    fontFamily: "'Arial', sans-serif",
+                }}
+                onKeyDown={handleKeyDown}
+            >
+                {/* Modal header */}
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "24px",
+                    }}
+                >
+                    <span
+                        style={{
+                            fontSize: "17px",
+                            fontWeight: "bold",
+                            color: T.dark,
+                            fontFamily: "'Georgia', serif",
+                        }}
+                    >
+                        Add New Section
+                    </span>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            background: "none",
+                            border: "none",
+                            fontSize: "20px",
+                            cursor: "pointer",
+                            color: "#888",
+                            lineHeight: 1,
+                        }}
+                    >
+                        ×
+                    </button>
+                </div>
+
+                {/* Heading field */}
+                <label
+                    style={{
+                        display: "block",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        color: T.dark,
+                        marginBottom: "6px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
+                    }}
+                >
+                    Section Heading *
+                </label>
+                <input
+                    autoFocus
+                    value={heading}
+                    onChange={(e) => setHeading(e.target.value)}
+                    placeholder="e.g. Background History"
+                    style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        fontSize: "14px",
+                        border: `1px solid ${heading.trim() ? T.mid : "#ddd"}`,
+                        borderRadius: "6px",
+                        outline: "none",
+                        boxSizing: "border-box",
+                        marginBottom: "20px",
+                        fontFamily: "'Georgia', serif",
+                        color: "#1a1a1a",
+                        transition: "border-color 0.15s",
+                    }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = T.mid)}
+                    onBlur={(e) =>
+                    (e.currentTarget.style.borderColor = heading.trim()
+                        ? T.mid
+                        : "#ddd")
+                    }
+                />
+
+                {/* Content field */}
+                <label
+                    style={{
+                        display: "block",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        color: T.dark,
+                        marginBottom: "6px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
+                    }}
+                >
+                    Content
+                </label>
+                <textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder="Enter section content. Use • at the start of a line for bullet points."
+                    rows={6}
+                    style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        fontSize: "13px",
+                        border: "1px solid #ddd",
+                        borderRadius: "6px",
+                        outline: "none",
+                        boxSizing: "border-box",
+                        resize: "vertical",
+                        fontFamily: "'Georgia', serif",
+                        lineHeight: "1.6",
+                        color: "#1a1a1a",
+                        transition: "border-color 0.15s",
+                    }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = T.mid)}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = "#ddd")}
+                />
+                <p
+                    style={{
+                        fontSize: "11px",
+                        color: "#999",
+                        marginTop: "6px",
+                        marginBottom: "24px",
+                    }}
+                >
+                    Tip: Start a line with • to create a bullet point.
+                </p>
+
+                {/* Actions */}
+                <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            padding: "9px 22px",
+                            borderRadius: "20px",
+                            border: "1px solid #ccc",
+                            background: "#fff",
+                            fontSize: "13px",
+                            cursor: "pointer",
+                            color: "#555",
+                        }}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleAdd}
+                        disabled={!heading.trim()}
+                        style={{
+                            padding: "9px 22px",
+                            borderRadius: "20px",
+                            border: "none",
+                            background: heading.trim() ? T.dark : "#ccc",
+                            color: "#fff",
+                            fontSize: "13px",
+                            cursor: heading.trim() ? "pointer" : "default",
+                            fontWeight: "bold",
+                            transition: "background 0.15s",
+                        }}
+                    >
+                        Add Section
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── mode prop ────────────────────────────────────────────────────────────────
 // "hidden"  → only the off-screen PDF container is rendered (no visible UI)
 // "preview" → page navigator + page preview shown, download button hidden
@@ -463,22 +793,87 @@ function InnerPage({ blocks, pageNum, totalPages, patientName, today }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const AssessmentReport = forwardRef(function AssessmentReport(
-    { data = {}, submission = [], mode = "full" },
+    { data = {}, submission = [], mode = "full", onSectionsChange },
     ref,
 ) {
     const reportRef = useRef(null);
     const [downloading, setDownloading] = useState(false);
 
+    // ── Local sections state ────────────────────────────────────────────────
+    const [sections, setSections] = useState(data.feedbackSections || []);
+
+    // Sync if parent updates feedbackSections
+    useEffect(() => {
+        setSections(data.feedbackSections || []);
+    }, [data.feedbackSections]);
+
+    // ── Heading edit state ──────────────────────────────────────────────────
+    const [editingIdx, setEditingIdx] = useState(null);
+    const [editValue, setEditValue] = useState("");
+
+    const startEdit = (idx) => {
+        setEditingIdx(idx);
+        setEditValue(sections[idx]?.heading || "");
+    };
+
+    const commitEdit = useCallback(() => {
+        if (editingIdx === null) return;
+        const trimmed = editValue.trim();
+        if (!trimmed) {
+            setEditingIdx(null);
+            return;
+        }
+        const updated = sections.map((s, i) =>
+            i === editingIdx ? { ...s, heading: trimmed } : s,
+        );
+        setSections(updated);
+        onSectionsChange?.(updated);
+        setEditingIdx(null);
+    }, [editingIdx, editValue, sections, onSectionsChange]);
+
+    const handleHeadingKeyDown = (e) => {
+        if (e.key === "Enter") commitEdit();
+        if (e.key === "Escape") setEditingIdx(null);
+    };
+
+    // ── Add section modal ───────────────────────────────────────────────────
+    const [showAddModal, setShowAddModal] = useState(false);
+
+    const handleAddSection = (newSection) => {
+        const updated = [...sections, newSection];
+        setSections(updated);
+        onSectionsChange?.(updated);
+    };
+
+    // ── Today ───────────────────────────────────────────────────────────────
     const today = new Date().toLocaleDateString("en-GB", {
         day: "2-digit",
         month: "long",
         year: "numeric",
     });
 
-    const blocks = makeBlocks(data, submission, today, data.feedbackSections || []);
-    const contentPages = splitIntoPages(blocks);
-    const totalPages = 1 + contentPages.length;
+    // ── Build blocks ────────────────────────────────────────────────────────
+    // Visible UI: editable headings
+    const editableBlocks = makeBlocks(data, submission, today, sections, {
+        editable: true,
+        editingIdx,
+        editValue,
+        onStart: startEdit,
+        onChange: setEditValue,
+        onCommit: commitEdit,
+        onKeyDown: handleHeadingKeyDown,
+    });
 
+    // Hidden PDF layer: plain headings (no edit chrome)
+    const pdfBlocks = makeBlocks(data, submission, today, sections, {
+        editable: false,
+    });
+
+    const editableContentPages = splitIntoPages(editableBlocks);
+    const pdfContentPages = splitIntoPages(pdfBlocks);
+    const totalPages = 1 + pdfContentPages.length;
+
+    // ── Download ────────────────────────────────────────────────────────────
     const handleDownload = useCallback(async () => {
         if (!reportRef.current) {
             console.error("reportRef is null — DOM not ready");
@@ -530,18 +925,17 @@ const AssessmentReport = forwardRef(function AssessmentReport(
         }
     }, [data.patientName]);
 
-    // Expose downloadPDF to parent via ref
     useImperativeHandle(
         ref,
-        () => ({
-            downloadPDF: handleDownload,
-        }),
+        () => ({ downloadPDF: handleDownload }),
         [handleDownload],
     );
 
-    const allPages = [
+    // ── Page arrays ─────────────────────────────────────────────────────────
+    // Visible (editable) pages
+    const visiblePages = [
         <CoverPage key="cover" data={data} today={today} />,
-        ...contentPages.map((pageBlocks, i) => (
+        ...editableContentPages.map((pageBlocks, i) => (
             <InnerPage
                 key={i + 1}
                 blocks={pageBlocks}
@@ -553,7 +947,22 @@ const AssessmentReport = forwardRef(function AssessmentReport(
         )),
     ];
 
-    // ── "hidden" mode: render only the off-screen container, nothing visible ──
+    // PDF (plain) pages — rendered off-screen for html2canvas
+    const pdfPages = [
+        <CoverPage key="cover" data={data} today={today} />,
+        ...pdfContentPages.map((pageBlocks, i) => (
+            <InnerPage
+                key={i + 1}
+                blocks={pageBlocks}
+                pageNum={i + 2}
+                totalPages={totalPages}
+                patientName={data.patientName || "Patient"}
+                today={today}
+            />
+        )),
+    ];
+
+    // ── "hidden" mode ────────────────────────────────────────────────────────
     if (mode === "hidden") {
         return (
             <div
@@ -569,7 +978,7 @@ const AssessmentReport = forwardRef(function AssessmentReport(
                 }}
                 aria-hidden="true"
             >
-                {allPages.map((page, i) => (
+                {pdfPages.map((page, i) => (
                     <div key={i} data-pdf-page="true">
                         {page}
                     </div>
@@ -578,10 +987,62 @@ const AssessmentReport = forwardRef(function AssessmentReport(
         );
     }
 
-    // ── "preview" or "full" mode: show scrollable pages ─────────────────
+    // ── "preview" / "full" mode ──────────────────────────────────────────────
     return (
         <div>
-            {/* ── SCROLLABLE PAGES ── */}
+            {/* ── ADD SECTION MODAL ── */}
+            {showAddModal && (
+                <AddSectionModal
+                    onAdd={handleAddSection}
+                    onClose={() => setShowAddModal(false)}
+                />
+            )}
+
+            {/* ── TOOLBAR ── */}
+            {(mode === "full" || mode === "preview") && (
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        alignItems: "center",
+                        gap: "10px",
+                        marginBottom: "12px",
+                        padding: "0 4px",
+                    }}
+                >
+                    <span
+                        style={{
+                            fontSize: "11px",
+                            color: "#999",
+                            fontFamily: "'Arial', sans-serif",
+                            marginRight: "auto",
+                        }}
+                    >
+                        💡 Click any section title to rename it
+                    </span>
+                    <button
+                        onClick={() => setShowAddModal(true)}
+                        style={{
+                            background: "transparent",
+                            color: T.dark,
+                            border: `1.5px solid ${T.dark}`,
+                            borderRadius: "20px",
+                            padding: "7px 18px",
+                            fontSize: "13px",
+                            fontFamily: "'Arial', sans-serif",
+                            cursor: "pointer",
+                            fontWeight: "600",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                        }}
+                    >
+                        + Add Section
+                    </button>
+                </div>
+            )}
+
+            {/* ── SCROLLABLE PAGES (editable) ── */}
             <div
                 style={{
                     overflowY: "auto",
@@ -593,7 +1054,7 @@ const AssessmentReport = forwardRef(function AssessmentReport(
                     gap: "24px",
                 }}
             >
-                {allPages.map((page, i) => (
+                {visiblePages.map((page, i) => (
                     <div
                         key={i}
                         style={{
@@ -606,7 +1067,7 @@ const AssessmentReport = forwardRef(function AssessmentReport(
                 ))}
             </div>
 
-            {/* ── OWN DOWNLOAD BUTTON — only shown in "full" (standalone) mode ── */}
+            {/* ── DOWNLOAD BUTTON (full mode only) ── */}
             {mode === "full" && (
                 <div
                     style={{
@@ -654,7 +1115,7 @@ const AssessmentReport = forwardRef(function AssessmentReport(
                 </div>
             )}
 
-            {/* ── HIDDEN FULL REPORT FOR html2canvas ── */}
+            {/* ── HIDDEN PDF LAYER (plain, no edit chrome) ── */}
             <div
                 ref={reportRef}
                 style={{
@@ -668,7 +1129,7 @@ const AssessmentReport = forwardRef(function AssessmentReport(
                 }}
                 aria-hidden="true"
             >
-                {allPages.map((page, i) => (
+                {pdfPages.map((page, i) => (
                     <div key={i} data-pdf-page="true">
                         {page}
                     </div>
