@@ -95,7 +95,7 @@ const handleLogoutClick = () => {
         <AppointmentSection
           recentSubmissions={recentSubmissions}
           upcomingAppointments={upcomingAppointments}
-          onReviewClick={(item) => navigate(`/assessment/${item.id}`)}
+          onReviewClick={(item) => navigate(`/assessments/${item.id}`)}
           onJoinCall={(apt) => window.open(apt.link, "_blank")}
         />
 

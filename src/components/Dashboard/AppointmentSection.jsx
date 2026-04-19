@@ -151,7 +151,7 @@ const AppointmentSection = () => {
                   <button
                     onClick={() =>
                       navigate(
-                        `/assessment/${submission.patientId}/${submission.assessmentId}`,
+                        `/assessments/${submission.patientId}/${submission.assessmentId}`,
                       )
                     }
                     className="text-sm text-blue-600 hover:text-blue-700 font-medium"

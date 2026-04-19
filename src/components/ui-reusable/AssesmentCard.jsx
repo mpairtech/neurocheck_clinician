@@ -48,7 +48,7 @@
 //   const statusClass = colors[statusKey] || colors.pending;
 
 //   const handleCardClick = () => {
-//     navigate(`/assessment/${patientId}/${assessmentId}`);
+//     navigate(`/assessments/${patientId}/${assessmentId}`);
 //   };
 
 //   // Check if button should be disabled
@@ -204,7 +204,7 @@ const AssessmentCard = ({
     statusKey === "rejected";
 
   const handleCardClick = () => {
-    navigate(`/assessment/${patientId}/${assessmentId}`);
+    navigate(`/assessments/${patientId}/${assessmentId}`);
   };
 
   return (
@@ -260,33 +260,33 @@ const AssessmentCard = ({
           </div>
 
           {/*  Accept / Decline buttons */}
-          <div className="absolute -top-3 right-2 flex gap-2 mt-3">
-            <button
-              onClick={() => !isDisabled && onAcceptCase?.()}
-              disabled={isDisabled}
-              className={`px-2 py-1 rounded-lg text-xs font-semibold border transition-all
-                ${
-                  isDisabled
+          {!isDisabled && (
+            <div className="absolute -top-3 right-2 flex gap-2 mt-3">
+              <button
+                onClick={() => onAcceptCase?.()}
+                disabled={isDisabled}
+                className={`px-2 py-1 rounded-lg text-xs font-semibold border transition-all
+                ${isDisabled
                     ? "bg-green-50 text-green-300  cursor-not-allowed"
                     : "bg-green-100 text-green-700  hover:bg-green-200 cursor-pointer"
-                }`}
-            >
-              Accept
-            </button>
+                  }`}
+              >
+                Accept
+              </button>
 
-            <button
-              onClick={() => !isDisabled && onDeclineCase?.()}
-              disabled={isDisabled}
-              className={`px-2 py-1 rounded-lg text-xs font-semibold border transition-all
-                ${
-                  isDisabled
+              <button
+                onClick={() =>  onDeclineCase?.()}
+                disabled={isDisabled}
+                className={`px-2 py-1 rounded-lg text-xs font-semibold border transition-all
+                ${isDisabled
                     ? "bg-red-50 text-red-300  cursor-not-allowed"
                     : "bg-red-100 text-red-700  hover:bg-red-200 cursor-pointer"
-                }`}
-            >
-              Decline
-            </button>
-          </div>
+                  }`}
+              >
+                Decline
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
