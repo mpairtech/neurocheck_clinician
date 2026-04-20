@@ -222,34 +222,52 @@ const PageFooter = ({ name, date, page }) => (
 
 const PAGE_H = 915;
 
-function quillToText(html = "") {
-    if (!html) return "";
-    const withBullets = html
-        .replace(/<li[^>]*>/gi, "\n• ")
-        .replace(/<\/li>/gi, "");
-        
-        const forBreaks = withBullets.replace(/<\/p>/gi, "\n");
-        
-        return forBreaks
-        .replace(/<[^>]+>/g, "")
-        .replace(/&amp;/g, "&")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&nbsp;/g, " ")
-        .replace(/\n{3,}/g, "\n\n")
-        .trim();
-}
-   
+const quillReportStyles = `
+  .ql-report h1, .ql-report h2, .ql-report h3 {
+    font-family: 'Georgia', serif;
+    color: #0B756E;
+    margin: 14px 0 8px;
+    line-height: 1.3;
+  }
+  .ql-report h1 { font-size: 20px; }
+  .ql-report h2 { font-size: 17px; }
+  .ql-report h3 { font-size: 15px; }
+  .ql-report p {
+    font-family: 'Arial', sans-serif;
+    font-size: 13px;
+    line-height: 1.7;
+    margin-bottom: 10px;
+    text-align: justify;
+    color: #1a1a1a;
+  }
+  .ql-report strong { font-weight: bold; }
+  .ql-report em { font-style: italic; }
+  .ql-report u { text-decoration: underline; }
+  .ql-report ul, .ql-report ol {
+    padding-left: 24px;
+    margin-bottom: 10px;
+    font-family: 'Arial', sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #1a1a1a;
+    text-align: left;
+  }
+  .ql-report ul { list-style-type: disc; }
+  .ql-report ol { list-style-type: decimal; }
+  .ql-report li { margin-bottom: 4px; }
+`;
 
-function renderDynamicContent(text) {
-    if (!text) return null;
-    return text.split("\n").map((line, i) => {
-        const trimmed = line.trim();
-        if (!trimmed) return null;
-        if (trimmed.startsWith("• "))
-            return <Bullet key={i}>{trimmed.slice(2)}</Bullet>;
-        return <p key={i} style={S.body}>{trimmed}</p>;
-    });
+function renderQuillHtml(html = "") {
+    if (!html || html.replace(/<[^>]*>/g, "").trim() === "") return null;
+    return (
+        <>
+            <style>{quillReportStyles}</style>
+            <div
+                className="ql-report"
+                dangerouslySetInnerHTML={{ __html: html }}
+            />
+        </>
+    );
 }
 
 function makeBlocks(data, submission, today, feedbackSections = []) {
@@ -260,24 +278,18 @@ function makeBlocks(data, submission, today, feedbackSections = []) {
 
     // ── Dynamic clinician sections ──────────────────────────────────────────
     feedbackSections.forEach((section) => {
-        const plainText = quillToText(section.content);
+        const plainText = section.content.replace(/<[^>]*>/g, "").trim();
         const lineCount = plainText
             .split("\n")
             .filter((l) => l.trim())
             .reduce((acc, line) => acc + Math.ceil(line.length / 92), 0);
-        const contentH = lineCount * 22;
-        const totalH = 58 + Math.max(30, contentH);
+        const contentH = Math.max(lineCount, 3) * 22;
+        const totalH = 58 + contentH;
 
         add(
-            <div
-                key={`section-${sectionNum}`} style={{ pageBreakInside: "avoid" }} >
-                <div>
-                    <Section
-                        num={sectionNum}
-                        title={section.heading || `Section ${sectionNum}`}
-                    />
-                </div>
-                <div>{renderDynamicContent(plainText)}</div>
+            <div key={`section-${sectionNum}`} style={{ pageBreakInside: "avoid" }}>
+                <Section num={sectionNum} title={section.heading || `Section ${sectionNum}`} />
+                {renderQuillHtml(section.content)}  {/* ← was: renderDynamicContent(quillToText(...)) */}
             </div>,
             totalH,
         );
@@ -565,7 +577,7 @@ const AssessmentReport = forwardRef(function AssessmentReport(
 
     // ── "hidden" mode: render only the off-screen container, nothing visible ──
     if (mode === "hidden") {
-        return  (
+        return (
             <div
                 ref={reportRef}
                 style={{
@@ -689,7 +701,7 @@ const AssessmentReport = forwardRef(function AssessmentReport(
             </div>
 */}
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        </div> 
+        </div>
     );
 });
 

@@ -183,7 +183,7 @@ const AssessmentDetails = () => {
             <PostConsultancyFeedbackForm
                 onSubmit={handleReportFormSubmit}
                 onCancel={() => setShowReportForm(false)}
-                existingSections={patientAppointment?.feedback?.sections || []} 
+                existingSections={patientAppointment?.feedback?.sections || []}
             />
         );
     }
@@ -221,86 +221,87 @@ const AssessmentDetails = () => {
                     <Info label="Type" value="Patient Assessment" />
                 </div>
             </div>
-            <div className="space-y-6  p-4 ">
-                {/* TABS */}
-                <div className="border-b flex gap-6 text-sm font-medium">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`pb-3 ${activeTab === tab
+            <div className="p-4">
+                <div className="space-y-6">
+                    {/* TABS */}
+                    <div className="border-b flex gap-6 text-sm font-medium">
+                        {tabs.map((tab) => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`pb-3 ${activeTab === tab
                                     ? "border-b-2 cursor-pointer border-[#114654] text-[#114654]"
                                     : "text-gray-500 cursor-pointer"
-                                }`}
-                        >
-                            {tab}
-                        </button>
-                    ))}
-                </div>
+                                    }`}
+                            >
+                                {tab}
+                            </button>
+                        ))}
+                    </div>
 
-                {/* CONTENT */}
-                {activeTab === "AI Summary" &&
-                    submission.map((item, i) => (
-                        <SubmissionDetailsCard
-                            key={i}
-                            name={item.patient.name}
-                            status={item.status}
-                            summary={item.summaries}
-                            childCondition={item.assessment.category}
-                            description={item.assessment.description}
-                        />
-                    ))}
+                    {/* CONTENT */}
+                    {activeTab === "AI Summary" &&
+                        submission.map((item, i) => (
+                            <SubmissionDetailsCard
+                                key={i}
+                                name={item.patient.name}
+                                status={item.status}
+                                summary={item.summaries}
+                                childCondition={item.assessment.category}
+                                description={item.assessment.description}
+                            />
+                        ))}
 
-                {activeTab === "View Assessment details" &&
-                    submission.map((item, i) => (
-                        <SubmissionDetails
-                            key={i}
-                            patientId={item.patient.id}
-                            assessmentId={item?.assessmentId}
-                            time={item.createdAt}
-                            score={item.score}
-                            rawSubmissions={rawSubmissions}
-                        />
-                    ))}
+                    {activeTab === "View Assessment details" &&
+                        submission.map((item, i) => (
+                            <SubmissionDetails
+                                key={i}
+                                patientId={item.patient.id}
+                                assessmentId={item?.assessmentId}
+                                time={item.createdAt}
+                                score={item.score}
+                                rawSubmissions={rawSubmissions}
+                            />
+                        ))}
 
-                {activeTab === "Consultancy Report" && (
-                    <>
-                        <ReportStructure
-                            ref={reportRef}
-                            data={{
-                                assessmentName: data.assessment.name || "",
-                                patientName: data.patient.name,
-                                age: getAge(data.patient.dateOfBirth),
-                                demographics: data.patient.demographics,
-                                clinician: data.clinician.name || "",
-                                reviewNotes: patientAppointment?.notes_from_review || "",
-                                postConsultNotes: patientAppointment?.feedback || "",
-                            }}
-                            submission={submission}
-                        />
-                        <div>
-                            <div className="mt-16">
-                                <h2 className="text-lg font-semibold text-[#114654] mb-1">
-                                    Consultancy Report Ready
-                                </h2>
-                                <p className="text-sm text-gray-500">
-                                    To preview the full report or download it as a PDF,{" "}
-                                    <span
-                                        onClick={() => setPreviewModal(true)}
-                                        className="text-[#18697f] underline cursor-pointer hover:text-[#0d3a45] font-semibold"
-                                    >
-                                        click here
-                                    </span>
-                                </p>
-                            </div>
-                            {/* <button
+                    {activeTab === "Consultancy Report" && (
+                        <>
+                            <ReportStructure
+                                ref={reportRef}
+                                data={{
+                                    assessmentName: data.assessment.name || "",
+                                    patientName: data.patient.name,
+                                    age: getAge(data.patient.dateOfBirth),
+                                    demographics: data.patient.demographics,
+                                    clinician: data.clinician.name || "",
+                                    reviewNotes: patientAppointment?.notes_from_review || "",
+                                    postConsultNotes: patientAppointment?.feedback || "",
+                                }}
+                                submission={submission}
+                            />
+                            <div>
+                                <div className="mt-16">
+                                    <h2 className="text-lg font-semibold text-[#114654] mb-1">
+                                        Consultancy Report Ready
+                                    </h2>
+                                    <p className="text-sm text-gray-500">
+                                        To preview the full report or download it as a PDF,{" "}
+                                        <span
+                                            onClick={() => setPreviewModal(true)}
+                                            className="text-[#18697f] underline cursor-pointer hover:text-[#0d3a45] font-semibold"
+                                        >
+                                            click here
+                                        </span>
+                                    </p>
+                                </div>
+                                {/* <button
                   onClick={() => setPreviewModal(true)}
                   className="border border-[#114654] cursor-pointer text-[#114654] px-6 py-2 text-sm rounded-full hover:bg-[#f0f7fa] transition-colors mt-3"
                 >
                   👁 Preview Report
                 </button> */}
-                        </div>
-                        {/* <AssessmentReport
+                            </div>
+                            {/* <AssessmentReport
                 ref={reportRef}
                 data={{
                   patientName: data.patient.name,
@@ -312,42 +313,42 @@ const AssessmentDetails = () => {
                 }}
                 submission={submission}
               /> */}
-                    </>
-                )}
-
-                {/* FOOTER ACTIONS */}
-                <div className="flex justify-end gap-3 pt-6">
-                    {!isFirst && (
-                        <button
-                            onClick={() => setActiveTab(tabs[index - 1])}
-                            className="border border-[#114654] cursor-pointer text-[#114654] px-5 py-2 text-xs rounded-full"
-                        >
-                            Previous
-                        </button>
+                        </>
                     )}
 
-                    {!isLast && (
-                        <button
-                            onClick={() => setActiveTab(tabs[index + 1])}
-                            className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
-                        >
-                            Next
-                        </button>
-                    )}
-
-                    {isLast && (
-                        <>
-                            {/* {isReportGenerated && ( */}
+                    {/* FOOTER ACTIONS */}
+                    <div className="flex justify-end gap-3 pt-6">
+                        {!isFirst && (
                             <button
-                                onClick={handleDownloadReport}
+                                onClick={() => setActiveTab(tabs[index - 1])}
+                                className="border border-[#114654] cursor-pointer text-[#114654] px-5 py-2 text-xs rounded-full"
+                            >
+                                Previous
+                            </button>
+                        )}
+
+                        {!isLast && (
+                            <button
+                                onClick={() => setActiveTab(tabs[index + 1])}
                                 className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
                             >
-                                Download Report
+                                Next
                             </button>
-                            {/* )} */}
+                        )}
 
-                            {/* {isReportGenerated && !hasFeedback && ( */}
-                            {/* <button
+                        {isLast && (
+                            <>
+                                {/* {isReportGenerated && ( */}
+                                <button
+                                    onClick={handleDownloadReport}
+                                    className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
+                                >
+                                    Download Report
+                                </button>
+                                {/* )} */}
+
+                                {/* {isReportGenerated && !hasFeedback && ( */}
+                                {/* <button
                   onClick={() => {
                     setSelectedAppointment(patientAppointment);
                     setFeedbackModal(true);
@@ -356,32 +357,32 @@ const AssessmentDetails = () => {
                 >
                   Add Feedback
                 </button> */}
-                            {/* )} */}
-<button
-    onClick={() => {
-        setSelectedAppointment(patientAppointment);
-        setShowReportForm(true);
-    }}
-    className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
->
-    {hasFeedback ? "Update Consultation Notes" : "Clinician Notes Post Consultation"}
-</button>
-
-                            {!hasAppointmentForPatient && (
+                                {/* )} */}
                                 <button
-                                    onClick={handleMakeDiagnosis}
+                                    onClick={() => {
+                                        setSelectedAppointment(patientAppointment);
+                                        setShowReportForm(true);
+                                    }}
                                     className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
                                 >
-                                    Make diagnosis report
+                                    {hasFeedback ? "Update Consultation Notes" : "Clinician Notes Post Consultation"}
                                 </button>
-                            )}
-                        </>
-                    )}
+
+                                {!hasAppointmentForPatient && (
+                                    <button
+                                        onClick={handleMakeDiagnosis}
+                                        className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
+                                    >
+                                        Make diagnosis report
+                                    </button>
+                                )}
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 {/* ── PREVIEW MODAL ── */}
                 <Modal
-                    classname=""
                     isOpen={previewModal}
                     closeModal={() => setPreviewModal(false)}
                     title="Consultancy Report Preview"
