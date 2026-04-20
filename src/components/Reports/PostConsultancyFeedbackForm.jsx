@@ -79,16 +79,20 @@ const QuillEditor = ({ value, onChange }) => {
 };
 
 /* ───────────────────────────────────────────── */
-const PostConsultancyFeedbackForm = ({ onSubmit, onCancel }) => {
-  const initial = SECTIONS.reduce(
-    (acc, { key }) => ({ ...acc, [key]: "" }),
-    {},
-  );
+const PostConsultancyFeedbackForm = ({ onSubmit, onCancel, existingSections = [] }) => {
+
+  const initial = SECTIONS.reduce((acc, { key, label }) => {
+  const existing = existingSections.find((s) => s.heading === label);
+  return { ...acc, [key]: existing?.content || "" };
+}, {});
 
   const [values, setValues] = useState(initial);
   const [activeSection, setActiveSection] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const sectionRefs = useRef({});
+  const isUpdate = existingSections.length > 0;
+
+const sectionRefs = useRef({});
+  const [sections, setSections] = useState(SECTIONS);
 
   const [error, setError] = useState("");
 
@@ -104,9 +108,15 @@ const PostConsultancyFeedbackForm = ({ onSubmit, onCancel }) => {
     setActiveSection(key);
   };
 
+  const handleLabelChange = (key, newLabel) => {
+    setSections((prev) =>
+      prev.map((s) => (s.key === key ? { ...s, label: newLabel } : s)),
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const allFilled = SECTIONS.every(({ key }) => hasContent(key));
+    const allFilled = sections.every(({ key }) => hasContent(key));
 
     if (!allFilled) {
       setError("Please fill all sections before submitting.");
@@ -128,9 +138,10 @@ const PostConsultancyFeedbackForm = ({ onSubmit, onCancel }) => {
     return stripped?.length > 0;
   };
 
-  const filledCount = SECTIONS.filter(({ key }) => hasContent(key)).length;
+ const filledCount = sections.filter(({ key }) => hasContent(key)).length;
 
-  const allFilled = SECTIONS.every(({ key }) => hasContent(key));
+  const allFilled = sections.every(({ key }) => hasContent(key));
+  
   return (
     <div className="min-h-screen bg-white font-sans ">
       {/* Top bar */}
@@ -142,7 +153,7 @@ const PostConsultancyFeedbackForm = ({ onSubmit, onCancel }) => {
             </button>
           )}
           <p className="text-teal-800 font-semibold text-xl">
-            Consultancy Report Form
+            Post Consultancy Feedback Form
           </p>
         </div>
 
@@ -154,7 +165,7 @@ const PostConsultancyFeedbackForm = ({ onSubmit, onCancel }) => {
       <div className="flex max-w-7xl mx-auto">
         {/* Sidebar */}
         <aside className="hidden lg:block w-60 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto p-4">
-          {SECTIONS.map(({ key, label }) => (
+          {sections.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => scrollTo(key)}
@@ -170,18 +181,24 @@ const PostConsultancyFeedbackForm = ({ onSubmit, onCancel }) => {
         </aside>
 
         {/* Main */}
-        <main className="flex-1 p-4 space-y-6">
+        <main className="flex-1 p-4 space-y-10 ">
           <form onSubmit={handleSubmit} id="report-form">
-            {SECTIONS.map(({ key, label }, index) => (
+            {sections.map(({ key, label }, index) => (
               <div
                 key={key}
                 ref={(el) => (sectionRefs.current[key] = el)}
-                className="bg-white rounded-lg border"
+                className="bg-white rounded-lg border my-2"
               >
-                <div className="px-4 py-2 border-b bg-gray-50">
-                  <h2 className="text-xs font-semibold">
-                    {index + 1}. {label}
-                  </h2>
+                <div className="px-4 py-4 border-b bg-gray-100 flex items-center justify-center gap-2 ">
+                  <span className="text-sm text-gray-500 font-medium">
+                    {index + 1}.
+                  </span>
+
+                  <input
+                    value={label}
+                    onChange={(e) => handleLabelChange(key, e.target.value)}
+                    className="text-sm font-semibold bg-transparent border-b outline-none w-full "
+                  />
                 </div>
 
                 <div className="p-4">
@@ -212,7 +229,8 @@ const PostConsultancyFeedbackForm = ({ onSubmit, onCancel }) => {
               disabled={submitting || !allFilled}
               className="bg-[#114654] text-white px-6 py-1.5 rounded disabled:opacity-50"
             >
-              {submitting ? "Saving..." : "Save Report"}
+              {submitting ? (isUpdate ? "Updating..." : "Saving...") : (isUpdate ? "Update Report" : "Save Report")}
+
             </button>
           </div>
         </main>

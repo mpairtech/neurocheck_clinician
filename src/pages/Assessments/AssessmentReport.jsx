@@ -81,14 +81,14 @@ const S = {
     badge: {
         background: T.dark,
         color: "#fff",
-        width: "24px",
-        height: "24px",
+        width: "28px",
+        height: "28px",
         minWidth: "24px",
         borderRadius: "4px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: "13px",
+        fontSize: "14px",
         fontWeight: "bold",
         fontFamily: "'Poppins', sans-serif"
     },
@@ -227,7 +227,10 @@ function quillToText(html = "") {
     const withBullets = html
         .replace(/<li[^>]*>/gi, "\n• ")
         .replace(/<\/li>/gi, "");
-    return withBullets
+        
+        const forBreaks = withBullets.replace(/<\/p>/gi, "\n");
+        
+        return forBreaks
         .replace(/<[^>]+>/g, "")
         .replace(/&amp;/g, "&")
         .replace(/&lt;/g, "<")
@@ -236,6 +239,7 @@ function quillToText(html = "") {
         .replace(/\n{3,}/g, "\n\n")
         .trim();
 }
+   
 
 function renderDynamicContent(text) {
     if (!text) return null;
@@ -281,74 +285,74 @@ function makeBlocks(data, submission, today, feedbackSections = []) {
     });
 
     // ── AI submission summaries ─────────────────────────────────────────────
-    if (submission?.length > 0) {
-        add(
-            <div key={`section-${sectionNum}`}>
-                <Section num={sectionNum} title="Assessment Summary" />
-                {submission.flatMap((item) =>
-                    item.summaries?.map((summary, i) => {
-                        const clean = summary.summary
-                            ?.replace(/[*#_`>]+/g, "")
-                            ?.replace(/-{3,}/g, "")
-                            ?.trim() || "";
-                        return (
-                            <div key={`summary-${i}`}>
-                                <div style={{ ...S.subHeading, marginTop: "20px", color: T.dark }}>
-                                    {summary.questionType}
-                                </div>
-                                <p style={S.body}>{clean}</p>
-                            </div>
-                        );
-                    }) || []
-                )}
-            </div>,
-            submission.flatMap(i => i.summaries || []).reduce((acc, s) => {
-                const clean = s.summary?.replace(/[*#_`>]+/g, "").replace(/-{3,}/g, "").trim() || "";
-                return acc + Math.ceil(clean.length / 92) * 22 + 40;
-            }, 58),
-        );
-        sectionNum++; // ← increment
-    }
+    // if (submission?.length > 0) {
+    //     add(
+    //         <div key={`section-${sectionNum}`}>
+    //             <Section num={sectionNum} title="Assessment Summary" />
+    //             {submission.flatMap((item) =>
+    //                 item.summaries?.map((summary, i) => {
+    //                     const clean = summary.summary
+    //                         ?.replace(/[*#_`>]+/g, "")
+    //                         ?.replace(/-{3,}/g, "")
+    //                         ?.trim() || "";
+    //                     return (
+    //                         <div key={`summary-${i}`}>
+    //                             <div style={{ ...S.subHeading, marginTop: "20px", color: T.dark }}>
+    //                                 {summary.questionType}
+    //                             </div>
+    //                             <p style={S.body}>{clean}</p>
+    //                         </div>
+    //                     );
+    //                 }) || []
+    //             )}
+    //         </div>,
+    //         submission.flatMap(i => i.summaries || []).reduce((acc, s) => {
+    //             const clean = s.summary?.replace(/[*#_`>]+/g, "").replace(/-{3,}/g, "").trim() || "";
+    //             return acc + Math.ceil(clean.length / 92) * 22 + 40;
+    //         }, 58),
+    //     );
+    //     sectionNum++; // ← increment
+    // }
 
     // ── Review notes ────────────────────────────────────────────────────────
-    if (data.reviewNotes) {
-        const h = Math.ceil(data.reviewNotes.length / 92) * 22 + 58;
-        add(
-            <div key={`section-${sectionNum}`}>
-                <Section num={sectionNum} title="Clinician Review Notes" />
-                <p style={S.body}>{data.reviewNotes}</p>
-            </div>,
-            Math.max(80, h),
-        );
-        sectionNum++; // ← increment
-    }
+    // if (data.reviewNotes) {
+    //     const h = Math.ceil(data.reviewNotes.length / 92) * 22 + 58;
+    //     add(
+    //         <div key={`section-${sectionNum}`}>
+    //             <Section num={sectionNum} title="Clinician Review Notes" />
+    //             <p style={S.body}>{data.reviewNotes}</p>
+    //         </div>,
+    //         Math.max(80, h),
+    //     );
+    //     sectionNum++; // ← increment
+    // }
 
     // ── Diagnostic Outcome ──────────────────────────────────────────────────
-    if (data.clinicianDiagnosis) {
-        const diagnoses = data.clinicianDiagnosis
-            .split(/[,;\/\n]+/)
-            .map((d) => d.trim())
-            .filter(Boolean);
+    // if (data.clinicianDiagnosis) {
+    //     const diagnoses = data.clinicianDiagnosis
+    //         .split(/[,;\/\n]+/)
+    //         .map((d) => d.trim())
+    //         .filter(Boolean);
 
-        add(
-            <div key={`section-${sectionNum}`}>
-                <Section num={sectionNum} title="Diagnostic Outcome" />
-                <p style={{ ...S.body, marginBottom: "18px" }}>
-                    The assessment findings are consistent with:
-                </p>
-                {diagnoses.map((d, i) => (
-                    <div key={i} style={S.outcomeBox}>{d}</div>
-                ))}
-                <p style={{ ...S.body, marginTop: "16px" }}>
-                    Both conditions are lifelong neurodevelopmental differences that have
-                    shaped the individual's cognitive, sensory, emotional, and functional
-                    profile.
-                </p>
-            </div>,
-            58 + diagnoses.length * 48 + 120,
-        );
-        sectionNum++; // ← increment
-    }
+    //     add(
+    //         <div key={`section-${sectionNum}`}>
+    //             <Section num={sectionNum} title="Diagnostic Outcome" />
+    //             <p style={{ ...S.body, marginBottom: "18px" }}>
+    //                 The assessment findings are consistent with:
+    //             </p>
+    //             {diagnoses.map((d, i) => (
+    //                 <div key={i} style={S.outcomeBox}>{d}</div>
+    //             ))}
+    //             <p style={{ ...S.body, marginTop: "16px" }}>
+    //                 Both conditions are lifelong neurodevelopmental differences that have
+    //                 shaped the individual's cognitive, sensory, emotional, and functional
+    //                 profile.
+    //             </p>
+    //         </div>,
+    //         58 + diagnoses.length * 48 + 120,
+    //     );
+    //     sectionNum++; // ← increment
+    // }
 
     // ── End of report ───────────────────────────────────────────────────────
     add(
@@ -485,13 +489,14 @@ const AssessmentReport = forwardRef(function AssessmentReport(
     const totalPages = 1 + contentPages.length;
 
     const handleDownload = useCallback(async () => {
-        if (!reportRef.current) {
-            console.error("reportRef is null — DOM not ready");
-            return;
-        }
+        // if (!reportRef.current) {
+        //     console.error("reportRef is null — DOM not ready");
+        //     return;
+        // }
         setDownloading(true);
         try {
-            const pageEls = reportRef.current.querySelectorAll("[data-pdf-page]");
+            const pageEls = document.querySelectorAll("[data-pdf-page]");
+            // const pageEls = reportRef.current.querySelectorAll("[data-pdf-page]");
             if (pageEls.length === 0) {
                 console.error("No [data-pdf-page] elements found");
                 return;
@@ -560,13 +565,14 @@ const AssessmentReport = forwardRef(function AssessmentReport(
 
     // ── "hidden" mode: render only the off-screen container, nothing visible ──
     if (mode === "hidden") {
-        return (
+        return  (
             <div
                 ref={reportRef}
                 style={{
                     position: "fixed",
                     top: 0,
-                    left: 0,
+                    left: "-9999px",
+                    // left: 0,
                     width: "794px",
                     opacity: 0,
                     pointerEvents: "none",
@@ -588,6 +594,7 @@ const AssessmentReport = forwardRef(function AssessmentReport(
         <div>
             {/* ── SCROLLABLE PAGES ── */}
             <div
+                ref={reportRef}
                 style={{
                     overflowY: "auto",
                     maxHeight: "80vh",
@@ -601,6 +608,7 @@ const AssessmentReport = forwardRef(function AssessmentReport(
                 {allPages.map((page, i) => (
                     <div
                         key={i}
+                        data-pdf-page="true"
                         style={{
                             boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
                             flexShrink: 0,
@@ -660,7 +668,7 @@ const AssessmentReport = forwardRef(function AssessmentReport(
             )}
 
             {/* ── HIDDEN FULL REPORT FOR html2canvas ── */}
-            <div
+            {/* <div
                 ref={reportRef}
                 style={{
                     position: "fixed",
@@ -679,9 +687,9 @@ const AssessmentReport = forwardRef(function AssessmentReport(
                     </div>
                 ))}
             </div>
-
+*/}
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        </div>
+        </div> 
     );
 });
 

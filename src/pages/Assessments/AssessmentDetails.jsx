@@ -183,6 +183,7 @@ const AssessmentDetails = () => {
             <PostConsultancyFeedbackForm
                 onSubmit={handleReportFormSubmit}
                 onCancel={() => setShowReportForm(false)}
+                existingSections={patientAppointment?.feedback?.sections || []} 
             />
         );
     }
@@ -356,15 +357,15 @@ const AssessmentDetails = () => {
                   Add Feedback
                 </button> */}
                             {/* )} */}
-                            <button
-                                onClick={() => {
-                                    setSelectedAppointment(patientAppointment);
-                                    setShowReportForm(true);
-                                }}
-                                className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
-                            >
-                                Clinician Notes Post Consultation
-                            </button>
+<button
+    onClick={() => {
+        setSelectedAppointment(patientAppointment);
+        setShowReportForm(true);
+    }}
+    className="bg-[#114654] cursor-pointer text-white px-5 py-2 text-xs rounded-full"
+>
+    {hasFeedback ? "Update Consultation Notes" : "Clinician Notes Post Consultation"}
+</button>
 
                             {!hasAppointmentForPatient && (
                                 <button
