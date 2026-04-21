@@ -4,22 +4,32 @@ import {
     useCallback,
     useImperativeHandle,
     forwardRef,
+    useEffect,
+    useMemo,
 } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
-const T = {
-    dark: "#0B756E",
-    mid: "#0B756E",
-    light: "#0B756E",
-    text: "#0B756E",
-};
+// ─── Theme ─────────────────────────────────────────────────────────────────
+const T = { dark: "#0B756E", mid: "#0B756E", light: "#f0faf9", text: "#0B756E" };
 
+// ─── A4 constants ──────────────────────────────────────────────────────────
+const A4_W = 794;
+const A4_H = 1123;
+const SIDE_PAD = 60;
+const HEADER_TOP = 48;
+const HEADER_H = 75;
+const FOOTER_H = 60;
+const CONTENT_H = A4_H - HEADER_H - FOOTER_H - 60;
+
+// ─── Styles ────────────────────────────────────────────────────────────────
 const S = {
     page: {
         background: "#fff",
-        width: "794px",
-        minHeight: "1123px",
+        width: `${A4_W}px`,
+        height: `${A4_H}px`,
+        minHeight: `${A4_H}px`,
+        maxHeight: `${A4_H}px`,
         margin: "0 auto",
         fontFamily: "'Georgia', serif",
         fontSize: "13px",
@@ -27,7 +37,8 @@ const S = {
         position: "relative",
         border: "1px solid #ddd",
         boxSizing: "border-box",
-        pageBreakAfter: "always",
+        overflow: "hidden",
+        flexShrink: 0,
     },
     topBar: {
         height: "8px",
@@ -41,9 +52,17 @@ const S = {
         padding: "80px 60px 60px",
         display: "flex",
         flexDirection: "column",
-        height: "1123px",
+        height: "100%",
+        boxSizing: "border-box",
     },
-    inner: { padding: "48px 60px 100px" },
+    contentZone: {
+        position: "absolute",
+        top: `${HEADER_H}px`,
+        left: `${SIDE_PAD}px`,
+        right: `${SIDE_PAD}px`,
+        height: `${CONTENT_H}px`,
+        overflow: "hidden",
+    },
     pageHeader: {
         display: "flex",
         justifyContent: "space-between",
@@ -55,12 +74,16 @@ const S = {
         fontFamily: "'Arial', sans-serif",
         fontWeight: "600",
         letterSpacing: "0.3px",
+        position: "absolute",
+        top: `${HEADER_TOP}px`,
+        left: `${SIDE_PAD}px`,
+        right: `${SIDE_PAD}px`,
     },
     footer: {
         position: "absolute",
         bottom: "24px",
-        left: "60px",
-        right: "60px",
+        left: `${SIDE_PAD}px`,
+        right: `${SIDE_PAD}px`,
         borderTop: "0.5px solid #ccc",
         paddingTop: "10px",
         display: "flex",
@@ -90,7 +113,7 @@ const S = {
         justifyContent: "center",
         fontSize: "14px",
         fontWeight: "bold",
-        fontFamily: "'Poppins', sans-serif"
+        fontFamily: "'Poppins', sans-serif",
     },
     sectionTitle: {
         fontSize: "20px",
@@ -112,22 +135,6 @@ const S = {
         textAlign: "justify",
         fontFamily: "'Arial', sans-serif",
     },
-    bullet: {
-        display: "flex",
-        alignItems: "flex-start",
-        gap: "8px",
-        marginBottom: "5px",
-        lineHeight: "1.5",
-        paddingLeft: "16px",
-    },
-    dot: {
-        width: "5px",
-        height: "5px",
-        minWidth: "5px",
-        borderRadius: "50%",
-        background: "#1a1a1a",
-        marginTop: "6px",
-    },
     infoTable: { width: "100%", borderCollapse: "collapse", marginTop: "32px", textAlign: "left" },
     infoRow: { borderBottom: "1px solid #e0e0e0" },
     infoLabel: {
@@ -139,19 +146,7 @@ const S = {
         width: "180px",
         background: "#f8fdfb",
     },
-    infoValue: {
-        padding: "10px 16px",
-        fontSize: "13px",
-        fontFamily: "'Arial', sans-serif",
-    },
-    highlightBox: {
-        background: T.light,
-        border: `1px solid ${T.mid}`,
-        borderRadius: "4px",
-        padding: "10px 16px",
-        marginBottom: "8px",
-        marginTop: "18px",
-    },
+    infoValue: { padding: "10px 16px", fontSize: "13px", fontFamily: "'Arial', sans-serif" },
     outcomeBox: {
         background: T.dark,
         color: "#fff",
@@ -162,12 +157,7 @@ const S = {
         fontWeight: "bold",
         fontSize: "14px",
     },
-    divider: {
-        width: "300px",
-        height: "5px",
-        background: T.dark,
-        margin: "20px auto",
-    },
+    divider: { width: "300px", height: "5px", background: T.dark, margin: "20px auto" },
     confidential: {
         color: "#999",
         fontSize: "11px",
@@ -178,224 +168,161 @@ const S = {
     },
 };
 
-const Bullet = ({ children }) => (
-    <div style={S.bullet}>
-        <div style={S.dot} />
-        <span style={{ lineHeight: "1.6", textAlign: "left" }}>{children}</span>
-    </div>
-);
+// ─── Quill HTML renderer ───────────────────────────────────────────────────
+const quillStyles = `
+  .ql-report h1,.ql-report h2,.ql-report h3{font-family:'Georgia',serif;color:#0B756E;margin:14px 0;line-height:1.3}
+  .ql-report h1{font-size:20px}.ql-report h2{font-size:17px}.ql-report h3{font-size:15px}
+  .ql-report p{font-family:'Arial',sans-serif;font-size:13px;line-height:1.7;margin-bottom:10px;text-align:justify;color:#1a1a1a}
+  .ql-report strong{font-weight:bold}.ql-report em{font-style:italic}.ql-report u{text-decoration:underline}
+  .ql-report ul,.ql-report ol{padding-left:24px;margin-bottom:10px;font-family:'Arial',sans-serif;font-size:13px;line-height:1.6;color:#1a1a1a;text-align:left}
+  .ql-report ul{list-style-type:disc}.ql-report ol{list-style-type:decimal}
+  .ql-report li{margin-bottom:4px}
+`;
+function renderQuillHtml(html = "") {
+    if (!html || html.replace(/<[^>]*>/g, "").trim() === "") return null;
+    return (
+        <>
+            <style>{quillStyles}</style>
+            <div className="ql-report" dangerouslySetInnerHTML={{ __html: html }} />
+        </>
+    );
+}
 
-const Section = ({ num, title }) => (
+// ─── Primitive UI pieces ───────────────────────────────────────────────────
+const SectionHeader = ({ num, title }) => (
     <div style={S.sectionRow}>
         <div style={S.badge}>{num}</div>
         <span style={S.sectionTitle}>{title}</span>
     </div>
 );
 
-const BoldEntry = ({ label, children }) => (
-    <div style={{ marginBottom: "10px", paddingLeft: "16px", textAlign: "left" }}>
-        <span style={{ fontWeight: "bold", fontFamily: "'Arial', sans-serif" }}>
-            {label}:{" "}
-        </span>
-        <span style={{ lineHeight: "1.6" }}>{children}</span>
-    </div>
-);
-
 const PageHeader = () => (
     <div style={S.pageHeader}>
-        <span style={{ color: "#0B756E" }}>NeuroCheck Pro</span>
+        <span style={{ color: T.dark }}>NeuroCheck Pro</span>
         <span style={{ color: "#888" }}>Private and Confidential</span>
     </div>
 );
 
 const PageFooter = ({ name, date, page }) => (
     <div style={S.footer}>
-        <span>
-            {name} | {date}
-        </span>
+        <span>{name} | {date}</span>
         <span>NeuroCheck Pro Ltd | Private and Confidential</span>
-        <span>
-            Page {page}
-        </span>
+        <span>Page {page}</span>
     </div>
 );
 
-const PAGE_H = 915;
+// ─── Block renderers ───────────────────────────────────────────────────────
 
-const quillReportStyles = `
-  .ql-report h1, .ql-report h2, .ql-report h3 {
-    font-family: 'Georgia', serif;
-    color: #0B756E;
-    margin: 14px 0 8px;
-    line-height: 1.3;
-  }
-  .ql-report h1 { font-size: 20px; }
-  .ql-report h2 { font-size: 17px; }
-  .ql-report h3 { font-size: 15px; }
-  .ql-report p {
-    font-family: 'Arial', sans-serif;
-    font-size: 13px;
-    line-height: 1.7;
-    margin-bottom: 10px;
-    text-align: justify;
-    color: #1a1a1a;
-  }
-  .ql-report strong { font-weight: bold; }
-  .ql-report em { font-style: italic; }
-  .ql-report u { text-decoration: underline; }
-  .ql-report ul, .ql-report ol {
-    padding-left: 24px;
-    margin-bottom: 10px;
-    font-family: 'Arial', sans-serif;
-    font-size: 13px;
-    line-height: 1.6;
-    color: #1a1a1a;
-    text-align: left;
-  }
-  .ql-report ul { list-style-type: disc; }
-  .ql-report ol { list-style-type: decimal; }
-  .ql-report li { margin-bottom: 4px; }
-`;
-
-function renderQuillHtml(html = "") {
-    if (!html || html.replace(/<[^>]*>/g, "").trim() === "") return null;
+function BlockFeedbackSection({ block }) {
     return (
-        <>
-            <style>{quillReportStyles}</style>
-            <div
-                className="ql-report"
-                dangerouslySetInnerHTML={{ __html: html }}
-            />
-        </>
+        <div>
+            <SectionHeader num={block.sectionNum} title={block.heading || `Section ${block.sectionNum}`} />
+            {renderQuillHtml(block.content)}
+        </div>
     );
 }
 
-function makeBlocks(data, submission, today, feedbackSections = []) {
-    const blocks = [];
-    const add = (el, h) => blocks.push({ el, h });
+function BlockEndOfReport() {
+    return (
+        <div style={{ minHeight: "120px" }}>
+            <div style={{ textAlign: "center", marginTop: "60px", paddingTop: "10px", borderTop: "0.5px solid #ddd" }}>
+                <p style={{ fontSize: "13px", color: "#555", fontFamily: "'Arial', sans-serif", paddingTop: "1px" }}>End of Report</p>
+                <p style={{ fontSize: "11px", color: "#999", fontFamily: "'Arial', sans-serif", marginTop: "4px" }}>
+                    NeuroCheck Pro Ltd | Private and Confidential
+                </p>
+            </div>
+        </div>
+    );
+}
 
+function renderBlock(block) {
+    switch (block.type) {
+        case "feedbackSection": return <BlockFeedbackSection block={block} />;
+        case "endOfReport": return <BlockEndOfReport />;
+        default: return null;
+    }
+}
+
+// ─── Build flat block list from all data sources ───────────────────────────
+function buildBlocks(data, submission) {
+    const blocks = [];
     let sectionNum = 1;
 
-    // ── Dynamic clinician sections ──────────────────────────────────────────
-    feedbackSections.forEach((section) => {
-        const plainText = section.content.replace(/<[^>]*>/g, "").trim();
-        const lineCount = plainText
-            .split("\n")
-            .filter((l) => l.trim())
-            .reduce((acc, line) => acc + Math.ceil(line.length / 92), 0);
-        const contentH = Math.max(lineCount, 3) * 22;
-        const totalH = 58 + contentH;
-
-        add(
-            <div key={`section-${sectionNum}`} style={{ pageBreakInside: "avoid" }}>
-                <Section num={sectionNum} title={section.heading || `Section ${sectionNum}`} />
-                {renderQuillHtml(section.content)}  {/* ← was: renderDynamicContent(quillToText(...)) */}
-            </div>,
-            totalH,
-        );
+    // 1. Clinician feedback sections (Quill HTML)
+    (data.feedbackSections || []).forEach((section) => {
+        blocks.push({ type: "feedbackSection", sectionNum, heading: section.heading, content: section.content });
         sectionNum++;
     });
 
-    // ── AI submission summaries ─────────────────────────────────────────────
-    // if (submission?.length > 0) {
-    //     add(
-    //         <div key={`section-${sectionNum}`}>
-    //             <Section num={sectionNum} title="Assessment Summary" />
-    //             {submission.flatMap((item) =>
-    //                 item.summaries?.map((summary, i) => {
-    //                     const clean = summary.summary
-    //                         ?.replace(/[*#_`>]+/g, "")
-    //                         ?.replace(/-{3,}/g, "")
-    //                         ?.trim() || "";
-    //                     return (
-    //                         <div key={`summary-${i}`}>
-    //                             <div style={{ ...S.subHeading, marginTop: "20px", color: T.dark }}>
-    //                                 {summary.questionType}
-    //                             </div>
-    //                             <p style={S.body}>{clean}</p>
-    //                         </div>
-    //                     );
-    //                 }) || []
-    //             )}
-    //         </div>,
-    //         submission.flatMap(i => i.summaries || []).reduce((acc, s) => {
-    //             const clean = s.summary?.replace(/[*#_`>]+/g, "").replace(/-{3,}/g, "").trim() || "";
-    //             return acc + Math.ceil(clean.length / 92) * 22 + 40;
-    //         }, 58),
-    //     );
-    //     sectionNum++; // ← increment
-    // }
-
-    // ── Review notes ────────────────────────────────────────────────────────
-    // if (data.reviewNotes) {
-    //     const h = Math.ceil(data.reviewNotes.length / 92) * 22 + 58;
-    //     add(
-    //         <div key={`section-${sectionNum}`}>
-    //             <Section num={sectionNum} title="Clinician Review Notes" />
-    //             <p style={S.body}>{data.reviewNotes}</p>
-    //         </div>,
-    //         Math.max(80, h),
-    //     );
-    //     sectionNum++; // ← increment
-    // }
-
-    // ── Diagnostic Outcome ──────────────────────────────────────────────────
-    // if (data.clinicianDiagnosis) {
-    //     const diagnoses = data.clinicianDiagnosis
-    //         .split(/[,;\/\n]+/)
-    //         .map((d) => d.trim())
-    //         .filter(Boolean);
-
-    //     add(
-    //         <div key={`section-${sectionNum}`}>
-    //             <Section num={sectionNum} title="Diagnostic Outcome" />
-    //             <p style={{ ...S.body, marginBottom: "18px" }}>
-    //                 The assessment findings are consistent with:
-    //             </p>
-    //             {diagnoses.map((d, i) => (
-    //                 <div key={i} style={S.outcomeBox}>{d}</div>
-    //             ))}
-    //             <p style={{ ...S.body, marginTop: "16px" }}>
-    //                 Both conditions are lifelong neurodevelopmental differences that have
-    //                 shaped the individual's cognitive, sensory, emotional, and functional
-    //                 profile.
-    //             </p>
-    //         </div>,
-    //         58 + diagnoses.length * 48 + 120,
-    //     );
-    //     sectionNum++; // ← increment
-    // }
-
-    // ── End of report ───────────────────────────────────────────────────────
-    add(
-        <div style={{ textAlign: "center", marginTop: "60px", paddingTop: "20px", borderTop: "0.5px solid #ddd" }}>
-            <p style={{ fontSize: "13px", color: "#555", fontFamily: "'Arial', sans-serif" }}>
-                End of Report
-            </p>
-            <p style={{ fontSize: "11px", color: "#999", fontFamily: "'Arial', sans-serif", marginTop: "4px" }}>
-                NeuroCheck Pro Ltd | Private and Confidential
-            </p>
-        </div>,
-        80,
-    );
+    // 5. End of report (always last)
+    blocks.push({ type: "endOfReport" });
 
     return blocks;
 }
 
-function splitIntoPages(blocks) {
+// ─── Pagination algorithm ──────────────────────────────────────────────────
+function paginateBlocks(blocksWithHeights) {
     const pages = [[]];
-    let usedH = 0;
-    for (const block of blocks) {
-        if (usedH + block.h > PAGE_H && pages[pages.length - 1].length > 0) {
-            pages.push([]);
-            usedH = 0;
+    let cursor = 0;
+
+    const currentPage = () => pages[pages.length - 1];
+    const newPage = () => { pages.push([]); cursor = 0; };
+
+    blocksWithHeights.forEach((block, blockIdx) => {
+        let remaining = block.measuredH;
+        let clipTop = 0;
+
+        while (remaining > 0) {
+            const available = CONTENT_H - cursor;
+            if (available <= 0) { newPage(); continue; }
+
+            const sliceH = Math.min(remaining, available);
+            currentPage().push({ blockIdx, clipTop, clipH: sliceH, y: cursor });
+
+            clipTop += sliceH;
+            remaining -= sliceH;
+            cursor += sliceH;
+
+            if (remaining > 0) newPage();
         }
-        pages[pages.length - 1].push(block);
-        usedH += block.h;
-    }
+    });
+
+    // Drop any empty trailing pages
+    while (pages.length > 0 && pages[pages.length - 1].length === 0) pages.pop();
+
     return pages;
 }
 
+// ─── Inner page ────────────────────────────────────────────────────────────
+function InnerPage({ slices, blocksWithHeights, pageNum, totalPages, patientName, today }) {
+    return (
+        <div style={S.page}>
+            <PageHeader />
+            <div style={S.contentZone}>
+                {slices.map((slice, i) => (
+                    <div
+                        key={i}
+                        style={{
+                            position: "absolute",
+                            top: `${slice.y}px`,
+                            left: 0,
+                            right: 0,
+                            height: `${slice.clipH}px`,
+                            overflow: "hidden",
+                        }}
+                    >
+                        <div style={{ transform: `` }}>
+                            {renderBlock(blocksWithHeights[slice.blockIdx])}
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <PageFooter name={patientName} date={today} page={pageNum} />
+        </div>
+    );
+}
+
+// ─── Cover page ────────────────────────────────────────────────────────────
 function CoverPage({ data, today }) {
     const rows = [
         ["Name", data.patientName || "—"],
@@ -409,35 +336,13 @@ function CoverPage({ data, today }) {
             <div style={S.topBar} />
             <div style={S.coverBody}>
                 <div style={{ marginTop: "80px", textAlign: "left" }}>
-                    <h1
-                        style={{
-                            fontSize: "40px",
-                            fontWeight: "bold",
-                            color: "#0B756E",
-                            marginBottom: "8px",
-                            fontFamily: "'Georgia', serif",
-                        }}
-                    >
+                    <h1 style={{ fontSize: "40px", fontWeight: "bold", color: T.dark, marginBottom: "8px", fontFamily: "'Georgia', serif" }}>
                         NeuroCheck Pro
                     </h1>
-                    <p
-                        style={{
-                            fontSize: "16px",
-                            color: "#444",
-                            marginBottom: "6px",
-                            fontFamily: "'Arial', sans-serif",
-                        }}
-                    >
+                    <p style={{ fontSize: "16px", color: "#444", marginBottom: "6px", fontFamily: "'Arial', sans-serif" }}>
                         Your Assessment Report
                     </p>
-                    <p
-                        style={{
-                            color: T.dark,
-                            fontWeight: "bold",
-                            fontFamily: "'Arial', sans-serif",
-                            fontSize: "15px",
-                        }}
-                    >
+                    <p style={{ color: T.dark, fontWeight: "bold", fontFamily: "'Arial', sans-serif", fontSize: "15px" }}>
                         {data.assessmentName || "-"}
                     </p>
                     <div style={S.divider} />
@@ -458,92 +363,151 @@ function CoverPage({ data, today }) {
     );
 }
 
-function InnerPage({ blocks, pageNum, totalPages, patientName, today }) {
+// ─── PaginatedContent ──────────────────────────────────────────────────────
+function PaginatedContent({ blocks, patientName, today }) {
+    const measureRef = useRef(null);
+    const [pages, setPages] = useState(null);
+    const [blocksWithHeights, setBlocksWithHeights] = useState(null);
+
+    const contentWidth = A4_W - SIDE_PAD * 2;
+
+    useEffect(() => {
+        if (!measureRef.current) return;
+        setPages(null);
+        setBlocksWithHeights(null);
+
+        const raf1 = requestAnimationFrame(() => {
+            const raf2 = requestAnimationFrame(() => {
+                if (!measureRef.current) return;
+
+                const els = measureRef.current.querySelectorAll("[data-block-idx]");
+                const heights = {};
+                els.forEach((el) => {
+                    heights[parseInt(el.dataset.blockIdx, 10)] = el.getBoundingClientRect().height;
+                });
+
+                const bwh = blocks.map((block, i) => ({
+                    ...block,
+                    measuredH: Math.max(heights[i] ?? 80, 1),
+                }));
+
+                setBlocksWithHeights(bwh);
+                setPages(paginateBlocks(bwh));
+            });
+        });
+
+        return () => cancelAnimationFrame(raf1);
+    }, [blocks]);
+
+    const totalInnerPages = pages ? pages.length : 1;
+    const totalPages = 1 + totalInnerPages;
+
     return (
-        <div style={S.page}>
-            <div style={S.inner}>
-                <PageHeader />
-                {blocks.map((b, i) => (
-                    <div key={i}>{b.el}</div>
+        <>
+            {/* ✅ ALWAYS mounted — no {!pages} guard */}
+            <div
+                ref={measureRef}
+                style={{
+                    position: "fixed",
+                    top: 0,
+                    left: "-9999px",
+                    width: `${contentWidth}px`,
+                    opacity: 0,
+                    pointerEvents: "none",
+                    zIndex: -1,
+                    fontFamily: "'Arial', sans-serif",
+                    fontSize: "13px",
+                    color: "#1a1a1a",
+                }}
+                aria-hidden="true"
+            >
+                {blocks.map((block, i) => (
+                    <div key={i} data-block-idx={i}>
+                        {renderBlock(block)}
+                    </div>
                 ))}
             </div>
-            <PageFooter
-                name={patientName}
-                date={today}
-                page={pageNum}
-                total={totalPages}
-            />
-        </div>
+
+            {/* Loading placeholder */}
+            {!pages && (
+                <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <p style={{ color: "#aaa", fontFamily: "'Arial', sans-serif", fontSize: "13px" }}>
+                        Preparing report…
+                    </p>
+                </div>
+            )}
+
+            {/* Paginated inner pages */}
+            {pages && blocksWithHeights && pages.map((slices, pageIdx) => (
+                <div
+                    key={pageIdx}
+                    data-pdf-page="true"
+                    style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.15)", flexShrink: 0 }}
+                >
+                    <InnerPage
+                        slices={slices}
+                        blocksWithHeights={blocksWithHeights}
+                        pageNum={pageIdx + 2}
+                        totalPages={totalPages}
+                        patientName={patientName}
+                        today={today}
+                    />
+                </div>
+            ))}
+        </>
     );
 }
 
-// ─── mode prop ────────────────────────────────────────────────────────────────
-// "hidden"  → only the off-screen PDF container is rendered (no visible UI)
-// "preview" → page navigator + page preview shown, download button hidden
-// "full"    → everything shown including own download button (default / standalone)
-// ─────────────────────────────────────────────────────────────────────────────
-
+// ─── Main exported component ───────────────────────────────────────────────
 const AssessmentReport = forwardRef(function AssessmentReport(
     { data = {}, submission = [], mode = "full" },
     ref,
 ) {
-    const reportRef = useRef(null);
     const [downloading, setDownloading] = useState(false);
 
-    const today = new Date().toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-    });
+    const today = useMemo(
+        () => new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" }),
+        [],
+    );
 
-    const blocks = makeBlocks(data, submission, today, data.feedbackSections || []);
-    const contentPages = splitIntoPages(blocks);
-    const totalPages = 1 + contentPages.length;
+    // Rebuild blocks only when the relevant data actually changes
+    const blocks = useMemo(
+        () => buildBlocks(data, submission),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [
+            JSON.stringify(data.feedbackSections),
+            JSON.stringify(submission),
+            data.reviewNotes,
+            data.clinicianDiagnosis,
+        ],
+    );
 
     const handleDownload = useCallback(async () => {
-        // if (!reportRef.current) {
-        //     console.error("reportRef is null — DOM not ready");
-        //     return;
-        // }
         setDownloading(true);
         try {
             const pageEls = document.querySelectorAll("[data-pdf-page]");
-            // const pageEls = reportRef.current.querySelectorAll("[data-pdf-page]");
-            if (pageEls.length === 0) {
-                console.error("No [data-pdf-page] elements found");
-                return;
-            }
-            const pdf = new jsPDF({
-                unit: "pt",
-                format: "a4",
-                orientation: "portrait",
-            });
-            const A4_W = 595.28;
-            const A4_H = 841.89;
+            if (!pageEls.length) { console.error("No [data-pdf-page] elements found"); return; }
+
+            const pdf = new jsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+            const PDF_W = 595.28, PDF_H = 841.89;
 
             for (let i = 0; i < pageEls.length; i++) {
                 const canvas = await html2canvas(pageEls[i], {
                     scale: 2,
                     useCORS: true,
                     backgroundColor: "#ffffff",
-                    windowWidth: 794,
-                    windowHeight: 1123,
-                    width: 794,
-                    height: 1123,
-                    x: 0,
-                    y: 0,
-                    scrollX: 0,
-                    scrollY: 0,
+                    windowWidth: A4_W,
+                    windowHeight: A4_H,
+                    width: A4_W,
+                    height: A4_H,
+                    x: 0, y: 0, scrollX: 0, scrollY: 0,
                     logging: false,
                 });
-                const imgData = canvas.toDataURL("image/jpeg", 0.95);
                 if (i > 0) pdf.addPage();
-                pdf.addImage(imgData, "JPEG", 0, 0, A4_W, A4_H);
+                pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, PDF_W, PDF_H);
             }
 
-            const safeName = (data.patientName || "report")
-                .replace(/\s+/g, "-")
-                .toLowerCase();
+            const safeName = (data.patientName || "report").replace(/\s+/g, "-").toLowerCase();
             pdf.save(`neurocheck-report-${safeName}.pdf`);
         } catch (err) {
             console.error("PDF generation failed:", err);
@@ -552,61 +516,31 @@ const AssessmentReport = forwardRef(function AssessmentReport(
         }
     }, [data.patientName]);
 
-    // Expose downloadPDF to parent via ref
-    useImperativeHandle(
-        ref,
-        () => ({
-            downloadPDF: handleDownload,
-        }),
-        [handleDownload],
+    useImperativeHandle(ref, () => ({ downloadPDF: handleDownload }), [handleDownload]);
+
+    const coverNode = (
+        <div data-pdf-page="true" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.15)", flexShrink: 0 }}>
+            <CoverPage data={data} today={today} />
+        </div>
     );
 
-    const allPages = [
-        <CoverPage key="cover" data={data} today={today} />,
-        ...contentPages.map((pageBlocks, i) => (
-            <InnerPage
-                key={i + 1}
-                blocks={pageBlocks}
-                pageNum={i + 2}
-                totalPages={totalPages}
-                patientName={data.patientName || "Patient"}
-                today={today}
-            />
-        )),
-    ];
-
-    // ── "hidden" mode: render only the off-screen container, nothing visible ──
+    // ── Hidden mode (parent controls download trigger) ────────────────────
     if (mode === "hidden") {
         return (
             <div
-                ref={reportRef}
-                style={{
-                    position: "fixed",
-                    top: 0,
-                    left: "-9999px",
-                    // left: 0,
-                    width: "794px",
-                    opacity: 0,
-                    pointerEvents: "none",
-                    zIndex: -1,
-                }}
+                style={{ position: "fixed", top: 0, left: "-9999px", width: `${A4_W}px`, opacity: 0, pointerEvents: "none", zIndex: -1 }}
                 aria-hidden="true"
             >
-                {allPages.map((page, i) => (
-                    <div key={i} data-pdf-page="true">
-                        {page}
-                    </div>
-                ))}
+                {coverNode}
+                <PaginatedContent blocks={blocks} patientName={data.patientName || "Patient"} today={today} />
             </div>
         );
     }
 
-    // ── "preview" or "full" mode: show scrollable pages ─────────────────
+    // ── Preview / Full mode ───────────────────────────────────────────────
     return (
         <div>
-            {/* ── SCROLLABLE PAGES ── */}
             <div
-                ref={reportRef}
                 style={{
                     overflowY: "auto",
                     maxHeight: "80vh",
@@ -617,29 +551,16 @@ const AssessmentReport = forwardRef(function AssessmentReport(
                     gap: "24px",
                 }}
             >
-                {allPages.map((page, i) => (
-                    <div
-                        key={i}
-                        data-pdf-page="true"
-                        style={{
-                            boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
-                            flexShrink: 0,
-                        }}
-                    >
-                        {page}
-                    </div>
-                ))}
+                {coverNode}
+                <PaginatedContent
+                    blocks={blocks}
+                    patientName={data.patientName || "Patient"}
+                    today={today}
+                />
             </div>
 
-            {/* ── OWN DOWNLOAD BUTTON — only shown in "full" (standalone) mode ── */}
             {mode === "full" && (
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "center",
-                        marginTop: "16px",
-                    }}
-                >
+                <div style={{ display: "flex", justifyContent: "center", marginTop: "16px" }}>
                     <button
                         onClick={handleDownload}
                         disabled={downloading}
@@ -659,48 +580,20 @@ const AssessmentReport = forwardRef(function AssessmentReport(
                     >
                         {downloading ? (
                             <>
-                                <span
-                                    style={{
-                                        width: "14px",
-                                        height: "14px",
-                                        border: "2px solid #fff",
-                                        borderTopColor: "transparent",
-                                        borderRadius: "50%",
-                                        display: "inline-block",
-                                        animation: "spin 0.8s linear infinite",
-                                    }}
-                                />
+                                <span style={{
+                                    width: "14px", height: "14px",
+                                    border: "2px solid #fff", borderTopColor: "transparent",
+                                    borderRadius: "50%", display: "inline-block",
+                                    animation: "spin 0.8s linear infinite",
+                                }} />
                                 Generating PDF…
                             </>
-                        ) : (
-                            "⬇ Download PDF Report"
-                        )}
+                        ) : "⬇ Download PDF Report"}
                     </button>
                 </div>
             )}
 
-            {/* ── HIDDEN FULL REPORT FOR html2canvas ── */}
-            {/* <div
-                ref={reportRef}
-                style={{
-                    position: "fixed",
-                    top: 0,
-                    left: 0,
-                    width: "794px",
-                    opacity: 0,
-                    pointerEvents: "none",
-                    zIndex: -1,
-                }}
-                aria-hidden="true"
-            >
-                {allPages.map((page, i) => (
-                    <div key={i} data-pdf-page="true">
-                        {page}
-                    </div>
-                ))}
-            </div>
-*/}
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
     );
 });
